@@ -19,7 +19,7 @@ use futures::{Stream, StreamExt, channel::mpsc};
 
 use crate::{Multer, MulterError, Multipart, ParseError, StorageEngine};
 
-/// Actix body stream mapped into `rust-multer` chunk errors.
+/// Actix body stream mapped into `multigear` chunk errors.
 pub type ActixMappedBodyStream<S> =
     futures::stream::Map<S, fn(Result<Bytes, PayloadError>) -> Result<Bytes, MulterError>>;
 /// Actix payload stream converted into a `Send` stream for multipart parsing.
@@ -36,7 +36,7 @@ pub fn content_type_from_request(request: &HttpRequest) -> Result<&str, MulterEr
         .map_err(|_| ParseError::new("Content-Type header must be ASCII").into())
 }
 
-/// Maps an Actix payload stream into the stream shape expected by `rust-multer`.
+/// Maps an Actix payload stream into the stream shape expected by `multigear`.
 pub fn map_payload_stream<S>(stream: S) -> ActixMappedBodyStream<S>
 where
     S: Stream<Item = Result<Bytes, PayloadError>>,
@@ -179,3 +179,4 @@ where
 fn actix_item_to_multer(item: Result<Bytes, PayloadError>) -> Result<Bytes, MulterError> {
     item.map_err(|err| ParseError::new(format!("actix body stream error: {err}")).into())
 }
+

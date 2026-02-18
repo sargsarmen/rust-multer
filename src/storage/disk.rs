@@ -112,7 +112,7 @@ impl DiskStorageBuilder {
 impl Default for DiskStorageBuilder {
     fn default() -> Self {
         Self {
-            root: std::env::temp_dir().join("rust-multer"),
+            root: std::env::temp_dir().join("multigear"),
             strategy: FilenameStrategy::Random,
             filter: None,
         }
@@ -300,6 +300,7 @@ pub fn sanitize_filename(input: &str) -> String {
 
     sanitized
 }
+
 
 
 

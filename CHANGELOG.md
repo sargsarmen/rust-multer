@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Part::stream()` now returns boxed stream surface for custom storage sinks.
 - `Part::size_hint()` now reflects `Content-Length` header hints when present.
 - README now includes 5-minute quickstarts for Axum and Actix.
+- Crate identity renamed from `rust-multer`/`rust_multer` to `multigear`/`multigear` with no compatibility shim.
 
 ### Security
 - Expanded filename sanitization tests to cover traversal and null-byte inputs.

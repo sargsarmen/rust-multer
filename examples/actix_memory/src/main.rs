@@ -1,7 +1,7 @@
-﻿#![allow(missing_docs)]
+#![allow(missing_docs)]
 
 use actix_web::{web, App, HttpRequest, HttpResponse, Responder};
-use rust_multer::{MemoryStorage, Multer};
+use multigear::{MemoryStorage, Multer};
 
 async fn upload(
     data: web::Data<Multer<MemoryStorage>>,
@@ -38,3 +38,4 @@ fn main() {
         .app_data(web::Data::new(multer))
         .route("/upload/avatar", web::post().to(upload));
 }
+

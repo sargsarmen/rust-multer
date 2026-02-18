@@ -3,7 +3,7 @@
 use bytes::Bytes;
 use criterion::{Criterion, criterion_group, criterion_main};
 use futures::stream;
-use rust_multer::{MemoryStorage, Multer, MulterError};
+use multigear::{MemoryStorage, Multer, MulterError};
 
 fn benchmark_upload_parse(c: &mut Criterion) {
     let runtime = tokio::runtime::Builder::new_current_thread()
@@ -39,3 +39,4 @@ fn build_body(size: usize) -> Vec<u8> {
 
 criterion_group!(benches, benchmark_upload_parse);
 criterion_main!(benches);
+

@@ -2,7 +2,7 @@
 
 use bytes::Bytes;
 use futures::{channel::mpsc, stream};
-use rust_multer::{
+use multigear::{
     Limits, MulterConfig, MulterError, Multipart, SelectedField, Selector, UnknownFieldPolicy,
 };
 
@@ -352,4 +352,5 @@ fn multipart_body(parts: &[(&str, Option<&str>, Option<&str>, &str)]) -> Vec<u8>
 fn bytes_stream(body: Vec<u8>) -> impl futures::Stream<Item = Result<Bytes, MulterError>> {
     stream::iter([Ok(Bytes::from(body))])
 }
+
 

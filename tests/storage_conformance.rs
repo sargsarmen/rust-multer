@@ -4,7 +4,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use bytes::Bytes;
 use futures::{StreamExt, stream};
-use rust_multer::{BoxStream, Multer, MulterError, Multipart, StorageEngine, StorageError};
+use multigear::{BoxStream, Multer, MulterError, Multipart, StorageEngine, StorageError};
 use tokio::sync::RwLock;
 
 #[derive(Debug, Clone, Default)]
@@ -111,6 +111,7 @@ async fn custom_storage_works_with_parse_and_store_pipeline() {
     assert_eq!(output.stored_files.len(), 1);
     assert_eq!(output.text_fields, vec![("note".to_owned(), "two".to_owned())]);
 }
+
 
 
 

@@ -10,7 +10,7 @@ use http_body_util::{BodyExt, Full};
 #[cfg(feature = "hyper")]
 use hyper::{header, service::Service, Request, Response};
 #[cfg(feature = "hyper")]
-use rust_multer::{extract_boundary, hyper::MulterService, MemoryStorage, Multer, StoredFile};
+use multigear::{extract_boundary, hyper::MulterService, MemoryStorage, Multer, StoredFile};
 
 #[cfg(feature = "hyper")]
 #[tokio::test]
@@ -103,3 +103,4 @@ async fn multer_service_rejects_requests_without_content_type() {
         .expect_err("service should fail");
     assert!(err.to_string().contains("missing Content-Type"));
 }
+

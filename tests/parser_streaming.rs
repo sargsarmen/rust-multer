@@ -2,7 +2,7 @@
 
 use bytes::Bytes;
 use futures::{StreamExt, channel::mpsc, stream};
-use rust_multer::{Multipart, MulterError, ParseError};
+use multigear::{Multipart, MulterError, ParseError};
 
 #[tokio::test]
 async fn parses_chunked_stream_and_yields_parts() {
@@ -215,4 +215,5 @@ async fn streams_large_body_before_terminal_boundary_arrives() {
 
     assert_eq!(total, 256 * 1024);
 }
+
 

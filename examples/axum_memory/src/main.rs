@@ -1,9 +1,9 @@
-﻿#![allow(missing_docs)]
+#![allow(missing_docs)]
 
 use std::sync::Arc;
 
 use axum::{extract::State, http::StatusCode, routing::post, Router};
-use rust_multer::{axum::MulterExtractor, MemoryStorage, Multer};
+use multigear::{axum::MulterExtractor, MemoryStorage, Multer};
 
 async fn upload(
     State(multer): State<Arc<Multer<MemoryStorage>>>,
@@ -18,7 +18,7 @@ async fn upload(
     Ok(StatusCode::OK)
 }
 
-fn err(e: rust_multer::MulterError) -> (StatusCode, String) {
+fn err(e: multigear::MulterError) -> (StatusCode, String) {
     (StatusCode::BAD_REQUEST, e.to_string())
 }
 
@@ -35,3 +35,4 @@ fn main() {
         .route("/upload/avatar", post(upload))
         .with_state(multer);
 }
+

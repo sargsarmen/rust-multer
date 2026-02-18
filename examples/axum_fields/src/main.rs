@@ -1,9 +1,9 @@
-﻿#![allow(missing_docs)]
+#![allow(missing_docs)]
 
 use std::sync::Arc;
 
 use axum::{extract::State, http::StatusCode, routing::post, Router};
-use rust_multer::{
+use multigear::{
     axum::MulterExtractor, DiskStorage, Field, FilenameStrategy, Multer, UnknownFieldPolicy,
 };
 
@@ -22,13 +22,13 @@ async fn upload(
     Ok(StatusCode::OK)
 }
 
-fn err(e: rust_multer::MulterError) -> (StatusCode, String) {
+fn err(e: multigear::MulterError) -> (StatusCode, String) {
     (StatusCode::BAD_REQUEST, e.to_string())
 }
 
 fn main() {
     let storage = DiskStorage::builder()
-        .destination(std::env::temp_dir().join("rust-multer-axum-fields"))
+        .destination(std::env::temp_dir().join("multigear-axum-fields"))
         .filename(FilenameStrategy::Random)
         .build()
         .expect("disk storage should build");
@@ -51,3 +51,5 @@ fn main() {
 
     let _app: Router<()> = Router::new().route("/products", post(upload)).with_state(multer);
 }
+
+

@@ -1,9 +1,11 @@
-﻿[package]
+[package]
 name = "actix-disk-example"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-rust-multer = { path = "../..", features = ["actix"] }
+multigear = { path = "../..", features = ["actix"] }
 actix-web = "4"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+
+

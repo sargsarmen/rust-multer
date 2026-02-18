@@ -2,7 +2,7 @@
 
 use bytes::Bytes;
 use futures::{TryStreamExt, stream};
-use rust_multer::{Multipart, MulterError, ParseError};
+use multigear::{Multipart, MulterError, ParseError};
 
 #[tokio::test]
 async fn exposes_metadata_accessors() {
@@ -117,4 +117,5 @@ fn assert_already_consumed(err: MulterError) {
         "unexpected error: {err}"
     );
 }
+
 

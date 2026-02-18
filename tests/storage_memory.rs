@@ -2,7 +2,7 @@
 
 use bytes::Bytes;
 use futures::stream;
-use rust_multer::{MemoryStorage, Multer, MulterError, Multipart};
+use multigear::{MemoryStorage, Multer, MulterError, Multipart};
 
 #[tokio::test]
 async fn stores_file_part_and_returns_metadata() {
@@ -78,5 +78,6 @@ fn multipart_body(parts: &[(&str, &str, &str, &str)]) -> Vec<u8> {
 fn bytes_stream(body: Vec<u8>) -> impl futures::Stream<Item = Result<Bytes, MulterError>> {
     stream::iter([Ok(Bytes::from(body))])
 }
+
 
 

@@ -1,14 +1,14 @@
-﻿#![allow(missing_docs)]
+#![allow(missing_docs)]
 
 use bytes::Bytes;
 use http_body_util::{BodyExt, Full};
 use hyper::{header, Request};
-use rust_multer::{DiskStorage, FilenameStrategy, Multer};
+use multigear::{DiskStorage, FilenameStrategy, Multer};
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
     let storage = DiskStorage::builder()
-        .destination(std::env::temp_dir().join("rust-multer-hyper-raw"))
+        .destination(std::env::temp_dir().join("multigear-hyper-raw"))
         .filename(FilenameStrategy::Random)
         .build()
         .expect("disk storage should build");
@@ -38,7 +38,7 @@ async fn main() {
         .get(header::CONTENT_TYPE)
         .and_then(|value| value.to_str().ok())
         .expect("content type should exist");
-    let boundary = rust_multer::extract_boundary(content_type).expect("boundary should parse");
+    let boundary = multigear::extract_boundary(content_type).expect("boundary should parse");
 
     let stream = request.into_body().into_data_stream();
     let mut multipart = multer
@@ -60,3 +60,5 @@ async fn main() {
 
     println!("stored {stored} file(s) via hyper Level 1 bridge");
 }
+
+

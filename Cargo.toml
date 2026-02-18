@@ -1,5 +1,5 @@
 [package]
-name = "rust-multer"
+name = "multigear"
 version = "1.0.0"
 edition = "2021"
 rust-version = "1.75"
@@ -96,3 +96,5 @@ rust_2018_idioms = { level = "warn", priority = -1 }
 unreachable_pub = "warn"
 unsafe_code = "forbid"
 unused_qualifications = "warn"
+
+

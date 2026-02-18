@@ -1,6 +1,6 @@
 #![allow(missing_docs)]
 
-use rust_multer::{
+use multigear::{
     ConfigError, Field, Limits, Multer, MulterBuilder, MulterConfig, SelectedFieldKind, Selector,
     UnknownFieldPolicy,
 };
@@ -163,3 +163,4 @@ fn fields_support_file_and_text_models() {
         other => panic!("expected fields selector, got {other:?}"),
     }
 }
+

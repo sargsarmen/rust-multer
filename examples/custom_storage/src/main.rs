@@ -1,10 +1,10 @@
-﻿#![allow(missing_docs)]
+#![allow(missing_docs)]
 
 use std::{collections::HashMap, sync::Arc};
 
 use bytes::Bytes;
 use futures::{StreamExt, stream};
-use rust_multer::{BoxStream, Multer, MulterError, StorageEngine, StorageError};
+use multigear::{BoxStream, Multer, MulterError, StorageEngine, StorageError};
 use tokio::sync::RwLock;
 
 #[derive(Debug, Clone, Default)]
@@ -65,3 +65,4 @@ async fn main() {
 
     println!("stored files: {}", output.stored_files.len());
 }
+

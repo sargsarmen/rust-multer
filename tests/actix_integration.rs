@@ -3,7 +3,7 @@
 #[cfg(feature = "actix")]
 use actix_web::{FromRequest, http::header, test, web};
 #[cfg(feature = "actix")]
-use rust_multer::{MemoryStorage, Multer, actix::MulterMiddleware};
+use multigear::{MemoryStorage, Multer, actix::MulterMiddleware};
 
 #[cfg(feature = "actix")]
 #[actix_web::test]
@@ -44,3 +44,4 @@ async fn parse_method_parses_actix_request_payload() {
 async fn middleware_type_is_constructible() {
     let _middleware = MulterMiddleware;
 }
+

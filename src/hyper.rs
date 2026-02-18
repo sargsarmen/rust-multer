@@ -11,7 +11,7 @@ use crate::{parser, Multer, MulterError, ParseError, StorageEngine};
 
 /// Boxed error type used by [`MulterService`].
 pub type BoxError = Box<dyn std::error::Error + Send + Sync>;
-/// Hyper body stream mapped into `rust-multer` chunk errors.
+/// Hyper body stream mapped into `multigear` chunk errors.
 pub type HyperBodyBoxStream =
     Pin<Box<dyn Stream<Item = Result<Bytes, MulterError>> + Send + 'static>>;
 
@@ -90,7 +90,7 @@ pub fn content_type_from_request<B>(request: &Request<B>) -> Result<&str, Multer
         .map_err(|_| ParseError::new("Content-Type header must be ASCII").into())
 }
 
-/// Maps a Hyper body into the stream shape expected by `rust-multer`.
+/// Maps a Hyper body into the stream shape expected by `multigear`.
 pub fn map_body_stream<B>(body: B) -> HyperBodyBoxStream
 where
     B: hyper::body::Body<Data = Bytes> + Send + 'static,
@@ -115,3 +115,4 @@ where
 {
     Box::new(err)
 }
+

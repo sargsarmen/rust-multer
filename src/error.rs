@@ -98,7 +98,7 @@ impl StorageError {
     }
 }
 
-/// Runtime error type used by `rust-multer`.
+/// Runtime error type used by `multigear`.
 #[derive(Debug, Error)]
 #[non_exhaustive]
 pub enum MulterError {
@@ -171,3 +171,4 @@ pub enum MulterError {
     #[error("multipart stream ended unexpectedly")]
     IncompleteStream,
 }
+

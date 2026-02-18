@@ -1,7 +1,7 @@
 #![allow(missing_docs)]
 
 use http::{HeaderMap, HeaderValue, header};
-use rust_multer::parser::headers::{
+use multigear::parser::headers::{
     parse_content_disposition, parse_part_content_type, parse_part_headers,
 };
 
@@ -115,3 +115,4 @@ fn assert_err_contains(actual: &str, expected_fragment: &str) {
         "expected `{actual}` to contain `{expected_fragment}`"
     );
 }
+

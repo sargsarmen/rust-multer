@@ -16,7 +16,7 @@ use bytes::Bytes;
 #[cfg(feature = "axum")]
 use futures::channel::mpsc;
 #[cfg(feature = "axum")]
-use rust_multer::{MemoryStorage, Multer, axum::MulterExtractor};
+use multigear::{MemoryStorage, Multer, axum::MulterExtractor};
 
 #[cfg(feature = "axum")]
 #[tokio::test]
@@ -82,3 +82,4 @@ async fn multer_extractor_is_streaming_and_does_not_require_full_body() {
     assert_eq!(part.field_name(), "field");
     assert_eq!(part.text().await.expect("text body should decode"), "value");
 }
+

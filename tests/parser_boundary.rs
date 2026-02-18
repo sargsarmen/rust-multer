@@ -1,6 +1,6 @@
 #![allow(missing_docs)]
 
-use rust_multer::parser::boundary::extract_multipart_boundary;
+use multigear::parser::boundary::extract_multipart_boundary;
 
 #[test]
 fn extracts_boundary_from_content_type() {
@@ -63,3 +63,4 @@ fn assert_err_contains(actual: &str, expected_fragment: &str) {
         "expected `{actual}` to contain `{expected_fragment}`"
     );
 }
+

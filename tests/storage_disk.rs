@@ -5,8 +5,8 @@ use std::sync::{Arc, Mutex};
 
 use bytes::Bytes;
 use futures::{SinkExt, channel::mpsc, stream};
-use rust_multer::{DiskStorage, FilenameStrategy, Multer, MulterError, Multipart};
-use rust_multer::storage::disk::sanitize_filename;
+use multigear::{DiskStorage, FilenameStrategy, Multer, MulterError, Multipart};
+use multigear::storage::disk::sanitize_filename;
 use uuid::Uuid;
 
 type ObservedFileMeta = Option<(String, Option<String>, String)>;
@@ -189,7 +189,7 @@ fn sanitize_filename_rejects_traversal_and_null_bytes() {
 }
 
 fn temp_root() -> PathBuf {
-    std::env::temp_dir().join(format!("rust-multer-test-{}", Uuid::new_v4()))
+    std::env::temp_dir().join(format!("multigear-test-{}", Uuid::new_v4()))
 }
 
 async fn cleanup(path: PathBuf) {
@@ -312,5 +312,7 @@ async fn stress_multi_gb_disk_upload_uses_bounded_stream_memory() {
 
     cleanup(root).await;
 }
+
+
 
 

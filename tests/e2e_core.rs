@@ -2,7 +2,7 @@
 
 use bytes::Bytes;
 use futures::stream;
-use rust_multer::{
+use multigear::{
     Limits, MemoryStorage, Multer, MulterConfig, MulterError, Selector, StorageError,
     UnknownFieldPolicy,
 };
@@ -176,3 +176,4 @@ async fn parse_and_store_respects_unknown_field_policy_regression() {
         Err(MulterError::UnexpectedField { field }) if field == "other"
     ));
 }
+

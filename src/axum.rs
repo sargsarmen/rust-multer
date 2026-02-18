@@ -12,7 +12,7 @@ use std::sync::Arc;
 
 use crate::{Multer, MulterError, Multipart, ParseError, StorageEngine};
 
-/// Axum body stream mapped into `rust-multer` chunk errors.
+/// Axum body stream mapped into `multigear` chunk errors.
 pub type AxumBodyStream<S> =
     stream::Map<S, fn(Result<Bytes, axum::Error>) -> Result<Bytes, MulterError>>;
 
@@ -112,7 +112,7 @@ pub fn content_type_from_headers(headers: &HeaderMap) -> Result<&str, MulterErro
         .map_err(|_| ParseError::new("Content-Type header must be ASCII").into())
 }
 
-/// Maps an Axum body stream into the stream shape expected by `rust-multer`.
+/// Maps an Axum body stream into the stream shape expected by `multigear`.
 pub fn map_body_stream<S>(stream: S) -> AxumBodyStream<S>
 where
     S: Stream<Item = Result<Bytes, axum::Error>>,
@@ -137,3 +137,4 @@ where
 fn axum_item_to_multer(item: Result<Bytes, axum::Error>) -> Result<Bytes, MulterError> {
     item.map_err(|err| ParseError::new(format!("axum body stream error: {err}")).into())
 }
+

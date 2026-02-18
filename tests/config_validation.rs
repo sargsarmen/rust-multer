@@ -1,6 +1,6 @@
 #![allow(missing_docs)]
 
-use rust_multer::{
+use multigear::{
     ConfigError, Limits, MulterBuilder, MulterConfig, SelectedField, Selector, UnknownFieldPolicy,
 };
 
@@ -138,3 +138,4 @@ fn builder_validation_surfaces_config_errors() {
     let result = MulterBuilder::new().with_config(config).build_config();
     assert!(matches!(result, Err(ConfigError::EmptyFieldName)));
 }
+

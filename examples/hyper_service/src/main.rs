@@ -1,16 +1,16 @@
-﻿#![allow(missing_docs)]
+#![allow(missing_docs)]
 
 use std::sync::Arc;
 
 use bytes::Bytes;
 use http_body_util::Full;
 use hyper::{header, service::Service, Request, Response};
-use rust_multer::{hyper::MulterService, DiskStorage, FilenameStrategy, Multer, StoredFile};
+use multigear::{hyper::MulterService, DiskStorage, FilenameStrategy, Multer, StoredFile};
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
     let storage = DiskStorage::builder()
-        .destination(std::env::temp_dir().join("rust-multer-hyper-service"))
+        .destination(std::env::temp_dir().join("multigear-hyper-service"))
         .filename(FilenameStrategy::Random)
         .build()
         .expect("disk storage should build");
@@ -47,3 +47,5 @@ async fn main() {
     let response = service.call(request).await.expect("service should succeed");
     println!("hyper service status: {}", response.status());
 }
+
+

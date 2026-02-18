@@ -1,7 +1,7 @@
 #![warn(missing_docs)]
 #![forbid(unsafe_code)]
 
-//! Core crate surface for `rust-multer`.
+//! Core crate surface for `multigear`.
 
 use bytes::Bytes;
 use futures::{Stream, StreamExt};
@@ -81,7 +81,7 @@ impl<O> Default for ProcessedMultipart<O> {
     }
 }
 
-/// Main `rust-multer` entry point.
+/// Main `multigear` entry point.
 #[derive(Debug)]
 pub struct Multer<S = NoopStorage> {
     config: MulterConfig,
@@ -92,7 +92,7 @@ impl<S> Multer<S> {
     /// Creates a new multer instance with the given storage backend.
     ///
     /// ```rust
-    /// use rust_multer::{MemoryStorage, Multer};
+    /// use multigear::{MemoryStorage, Multer};
     ///
     /// let multer = Multer::new(MemoryStorage::new());
     /// assert!(multer.config().limits.allowed_mime_types.is_empty());
@@ -176,7 +176,7 @@ where
     /// ```rust
     /// use bytes::Bytes;
     /// use futures::stream;
-    /// use rust_multer::{MemoryStorage, Multer, MulterError};
+    /// use multigear::{MemoryStorage, Multer, MulterError};
     ///
     /// # #[tokio::main(flavor = "current_thread")]
     /// # async fn main() {
@@ -218,7 +218,7 @@ where
     /// ```rust
     /// use bytes::Bytes;
     /// use futures::stream;
-    /// use rust_multer::{MemoryStorage, Multer, MulterError};
+    /// use multigear::{MemoryStorage, Multer, MulterError};
     ///
     /// # #[tokio::main(flavor = "current_thread")]
     /// # async fn main() {
@@ -305,7 +305,7 @@ impl Multer<NoopStorage> {
     /// Creates a fluent builder with permissive defaults.
     ///
     /// ```rust
-    /// use rust_multer::{Multer, UnknownFieldPolicy};
+    /// use multigear::{Multer, UnknownFieldPolicy};
     ///
     /// let multer = Multer::builder()
     ///     .any()
@@ -320,3 +320,5 @@ impl Multer<NoopStorage> {
         MulterBuilder::default()
     }
 }
+
+

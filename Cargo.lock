@@ -1229,6 +1229,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "multigear"
+version = "1.0.0"
+dependencies = [
+ "actix-multipart",
+ "actix-web",
+ "async-trait",
+ "axum",
+ "bytes",
+ "criterion",
+ "futures",
+ "http 1.4.0",
+ "http-body-util",
+ "hyper",
+ "hyper-util",
+ "mime",
+ "pin-project",
+ "serde",
+ "thiserror",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "num-conv"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1490,31 +1515,6 @@ name = "regex-syntax"
 version = "0.8.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a96887878f22d7bad8a3b6dc5b7440e0ada9a245242924394987b21cf2210a4c"
-
-[[package]]
-name = "rust-multer"
-version = "1.0.0"
-dependencies = [
- "actix-multipart",
- "actix-web",
- "async-trait",
- "axum",
- "bytes",
- "criterion",
- "futures",
- "http 1.4.0",
- "http-body-util",
- "hyper",
- "hyper-util",
- "mime",
- "pin-project",
- "serde",
- "thiserror",
- "tokio",
- "tokio-util",
- "tracing",
- "uuid",
-]
 
 [[package]]
 name = "rustc_version"

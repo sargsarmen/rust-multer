@@ -1,9 +1,9 @@
-﻿#![allow(missing_docs)]
+#![allow(missing_docs)]
 
 use std::sync::Arc;
 
 use axum::{extract::State, http::StatusCode, routing::post, Router};
-use rust_multer::{axum::MulterExtractor, DiskStorage, FilenameStrategy, Multer};
+use multigear::{axum::MulterExtractor, DiskStorage, FilenameStrategy, Multer};
 
 async fn upload(
     State(multer): State<Arc<Multer<DiskStorage>>>,
@@ -18,13 +18,13 @@ async fn upload(
     Ok(StatusCode::OK)
 }
 
-fn err(e: rust_multer::MulterError) -> (StatusCode, String) {
+fn err(e: multigear::MulterError) -> (StatusCode, String) {
     (StatusCode::BAD_REQUEST, e.to_string())
 }
 
 fn main() {
     let storage = DiskStorage::builder()
-        .destination(std::env::temp_dir().join("rust-multer-axum-disk"))
+        .destination(std::env::temp_dir().join("multigear-axum-disk"))
         .filename(FilenameStrategy::Random)
         .build()
         .expect("disk storage should build");
@@ -40,3 +40,5 @@ fn main() {
 
     let _app: Router<()> = Router::new().route("/upload", post(upload)).with_state(multer);
 }
+
+

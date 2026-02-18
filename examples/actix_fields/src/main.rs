@@ -1,7 +1,7 @@
-﻿#![allow(missing_docs)]
+#![allow(missing_docs)]
 
 use actix_web::{web, App, HttpRequest, HttpResponse, Responder};
-use rust_multer::{DiskStorage, Field, FilenameStrategy, Multer, UnknownFieldPolicy};
+use multigear::{DiskStorage, Field, FilenameStrategy, Multer, UnknownFieldPolicy};
 
 async fn upload(
     data: web::Data<Multer<DiskStorage>>,
@@ -31,7 +31,7 @@ async fn upload(
 
 fn main() {
     let storage = DiskStorage::builder()
-        .destination(std::env::temp_dir().join("rust-multer-actix-fields"))
+        .destination(std::env::temp_dir().join("multigear-actix-fields"))
         .filename(FilenameStrategy::Random)
         .build()
         .expect("disk storage should build");
@@ -53,3 +53,5 @@ fn main() {
         .app_data(web::Data::new(multer))
         .route("/products", web::post().to(upload));
 }
+
+
