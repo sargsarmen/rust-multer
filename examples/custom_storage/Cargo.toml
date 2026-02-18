@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-multigear = { path = "../.." }
+multigear = { path = "../..", features = ["actix"] }
+actix-web = "4"
 async-trait = "0.1"
 bytes = "1"
 futures = "0.3"
