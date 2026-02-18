@@ -90,7 +90,7 @@ const INDEX_HTML: &str = r#"<!doctype html>
 </html>
 "#;
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() -> io::Result<()> {
     let storage = DiskStorage::builder()
         .destination(std::env::temp_dir().join("multigear-hyper-service"))

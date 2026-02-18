@@ -6,7 +6,7 @@ use bytes::Bytes;
 use http_body_util::{BodyExt, Full};
 use hyper::{
     body::Incoming,
-    header::{self, CONTENT_TYPE},
+    header::CONTENT_TYPE,
     server::conn::http1,
     service::service_fn,
     Method, Request, Response, StatusCode,
@@ -104,7 +104,7 @@ async fn upload(
 fn text_response(status: StatusCode, body: impl Into<Bytes>) -> Response<Full<Bytes>> {
     Response::builder()
         .status(status)
-        .header(header::CONTENT_TYPE, "text/plain; charset=utf-8")
+        .header(CONTENT_TYPE, "text/plain; charset=utf-8")
         .body(Full::new(body.into()))
         .expect("response should build")
 }
@@ -112,7 +112,7 @@ fn text_response(status: StatusCode, body: impl Into<Bytes>) -> Response<Full<By
 fn html_response(body: &'static str) -> Response<Full<Bytes>> {
     Response::builder()
         .status(StatusCode::OK)
-        .header(header::CONTENT_TYPE, "text/html; charset=utf-8")
+        .header(CONTENT_TYPE, "text/html; charset=utf-8")
         .body(Full::new(Bytes::from_static(body.as_bytes())))
         .expect("response should build")
 }
@@ -135,7 +135,7 @@ const INDEX_HTML: &str = r#"<!doctype html>
 </html>
 "#;
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() -> io::Result<()> {
     let storage = DiskStorage::builder()
         .destination(std::env::temp_dir().join("multigear-hyper-raw"))
