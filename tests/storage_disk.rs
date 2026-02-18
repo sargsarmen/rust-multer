@@ -9,6 +9,8 @@ use rust_multer::{DiskStorage, FilenameStrategy, Multer, MulterError, Multipart}
 use rust_multer::storage::disk::sanitize_filename;
 use uuid::Uuid;
 
+type ObservedFileMeta = Option<(String, Option<String>, String)>;
+
 #[tokio::test]
 async fn keep_strategy_sanitizes_filename_and_writes_to_disk() {
     let root = temp_root();
@@ -122,16 +124,20 @@ async fn disk_filter_can_reject_files_before_write() {
 }
 
 #[tokio::test]
-async fn disk_filter_receives_size_hint_from_part_headers() {
+async fn disk_filter_receives_core_file_metadata() {
     let root = temp_root();
-    let observed_size_hint: Arc<Mutex<Option<Option<u64>>>> = Arc::new(Mutex::new(None));
-    let observed = Arc::clone(&observed_size_hint);
+    let observed_meta: Arc<Mutex<ObservedFileMeta>> = Arc::new(Mutex::new(None));
+    let observed = Arc::clone(&observed_meta);
 
     let storage = DiskStorage::builder()
         .destination(&root)
         .filename(FilenameStrategy::Keep)
         .filter(move |meta| {
-            *observed.lock().expect("lock should succeed") = Some(meta.size_hint);
+            *observed.lock().expect("lock should succeed") = Some((
+                meta.field_name.clone(),
+                meta.file_name.clone(),
+                meta.content_type.clone(),
+            ));
             true
         })
         .build()
@@ -156,8 +162,15 @@ async fn disk_filter_receives_size_hint_from_part_headers() {
         .expect("part expected");
 
     let _stored = multer.store(part).await.expect("store should succeed");
-    let captured = *observed_size_hint.lock().expect("lock should succeed");
-    assert_eq!(captured, Some(Some(5)));
+    let captured = observed_meta.lock().expect("lock should succeed").clone();
+    assert_eq!(
+        captured,
+        Some((
+            "upload".to_owned(),
+            Some("hinted.txt".to_owned()),
+            "text/plain".to_owned(),
+        ))
+    );
 
     cleanup(root).await;
 }

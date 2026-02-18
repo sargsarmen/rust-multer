@@ -26,7 +26,7 @@ async fn exposes_metadata_accessors() {
 
     assert_eq!(part.field_name(), "avatar");
     assert_eq!(part.file_name(), Some("face.png"));
-    assert_eq!(part.content_type().essence_str(), "image/png");
+    assert_eq!(part.content_type(), "image/png");
     assert_eq!(
         part.headers()
             .get("content-disposition")
@@ -73,7 +73,7 @@ async fn stream_is_single_pass_and_returns_body() {
         .expect("part expected")
         .expect("part should parse");
 
-    let stream = part.stream().expect("stream should be created");
+    let stream = part.stream();
     let chunks = stream.try_collect::<Vec<_>>().await.expect("stream should read");
     assert_eq!(chunks, vec![Bytes::from_static(b"stream-body")]);
 

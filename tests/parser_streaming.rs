@@ -194,7 +194,7 @@ async fn streams_large_body_before_terminal_boundary_arrives() {
         .expect("headers should parse")
         .expect("part should exist");
 
-    let mut stream = part.stream().expect("stream should be available");
+    let mut stream = part.stream();
     let first = stream
         .next()
         .await

@@ -52,7 +52,7 @@ Add dependencies:
 
 ```toml
 rust-multer = { path = ".", features = ["axum"] }
-axum = "0.8"
+axum = "0.7"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```
 
@@ -117,6 +117,8 @@ async fn upload(
 ```
 
 ## Examples
+
+Examples live under `examples/*.rs` and can be run with `cargo run --example <name>`.
 
 - `cargo run --example custom_storage`
 - `cargo run --example streaming_large_file`

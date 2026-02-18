@@ -26,8 +26,6 @@ pub struct FileMeta {
     pub file_name: Option<String>,
     /// Content type observed on the uploaded file part.
     pub content_type: String,
-    /// Optional backend-specific size hint in bytes.
-    pub size_hint: Option<u64>,
 }
 
 /// Metadata describing a stored file.
@@ -49,7 +47,7 @@ pub struct StoredFile {
 
 /// Async trait abstraction for file storage backends.
 #[async_trait::async_trait]
-pub trait StorageEngine: Send + Sync + std::fmt::Debug + 'static {
+pub trait StorageEngine: Send + Sync + 'static {
     /// Backend-specific output type returned after a successful store.
     type Output: Send;
     /// Backend-specific error type surfaced on store failure.
@@ -61,7 +59,6 @@ pub trait StorageEngine: Send + Sync + std::fmt::Debug + 'static {
         field_name: &str,
         file_name: Option<&str>,
         content_type: &str,
-        size_hint: Option<u64>,
         stream: BoxStream<'_, Result<Bytes, MulterError>>,
     ) -> Result<Self::Output, Self::Error>;
 }
@@ -80,7 +77,6 @@ impl StorageEngine for NoopStorage {
         _field_name: &str,
         _file_name: Option<&str>,
         _content_type: &str,
-        _size_hint: Option<u64>,
         _stream: BoxStream<'_, Result<Bytes, MulterError>>,
     ) -> Result<Self::Output, Self::Error> {
         Err(StorageError::new(

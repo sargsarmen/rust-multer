@@ -31,7 +31,6 @@ impl StorageEngine for MapStorage {
         field_name: &str,
         file_name: Option<&str>,
         content_type: &str,
-        _size_hint: Option<u64>,
         mut stream: BoxStream<'_, Result<Bytes, MulterError>>,
     ) -> Result<Self::Output, Self::Error> {
         let key = format!("{field_name}-{}", self.items.read().await.len());

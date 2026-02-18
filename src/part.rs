@@ -5,7 +5,7 @@ use std::{
 };
 
 use bytes::Bytes;
-use futures::{Stream, StreamExt};
+use futures::{Stream, StreamExt, stream};
 use http::{HeaderMap, header};
 
 use crate::{BoxStream, MulterError, ParseError, parser::headers::ParsedPartHeaders};
@@ -56,8 +56,8 @@ impl<'a> Part<'a> {
     }
 
     /// Returns the parsed content type for this part.
-    pub fn content_type(&self) -> &mime::Mime {
-        &self.headers.content_type
+    pub fn content_type(&self) -> &str {
+        self.headers.content_type.as_ref()
     }
 
     /// Returns raw part headers.
@@ -87,7 +87,7 @@ impl<'a> Part<'a> {
 
     /// Reads the full part body as bytes.
     pub async fn bytes(&mut self) -> Result<Bytes, MulterError> {
-        let mut stream = self.stream()?;
+        let mut stream = self.stream();
         let mut out = Vec::new();
         while let Some(chunk) = stream.next().await {
             out.extend_from_slice(&chunk?);
@@ -104,17 +104,19 @@ impl<'a> Part<'a> {
 
     /// Returns a one-shot body stream for this part.
     ///
-    /// The returned stream can only be created once; subsequent calls return an
-    /// "already consumed" error.
-    pub fn stream(&mut self) -> Result<BoxStream<'_, Result<Bytes, MulterError>>, MulterError> {
+    /// The returned stream can only be created once; subsequent calls return a
+    /// stream that yields a single "already consumed" error item.
+    pub fn stream(&mut self) -> BoxStream<'_, Result<Bytes, MulterError>> {
         let Some(body_reader) = self.body_reader.take() else {
-            return Err(ParseError::new("part body was already consumed").into());
+            return Box::pin(stream::once(async {
+                Err(ParseError::new("part body was already consumed").into())
+            }));
         };
 
-        Ok(Box::pin(PartBodyStream {
+        Box::pin(PartBodyStream {
             body_reader,
             finished: false,
-        }))
+        })
     }
 }
 

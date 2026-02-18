@@ -118,8 +118,7 @@ where
         let field_name = part.field_name().to_owned();
         let file_name = part.file_name().map(ToOwned::to_owned);
         let content_type = part.content_type().to_string();
-        let size_hint = part.size_hint();
-        let stream = part.stream()?;
+        let stream = part.stream();
 
         #[cfg(feature = "tracing")]
         tracing::debug!(
@@ -134,7 +133,6 @@ where
                 &field_name,
                 file_name.as_deref(),
                 &content_type,
-                size_hint,
                 stream,
             )
             .await
