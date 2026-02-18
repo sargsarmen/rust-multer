@@ -28,9 +28,9 @@ pub mod actix;
 pub mod axum;
 
 pub use builder::MulterBuilder;
-pub use config::MulterConfig;
+pub use config::{MulterConfig, SelectedField, Selector, UnknownFieldPolicy};
 pub use error::MulterError;
-pub use field::Field;
+pub use field::{Field, FieldKind, FileField, TextField};
 pub use limits::Limits;
 pub use multipart::Multipart;
 pub use part::Part;
