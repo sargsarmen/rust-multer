@@ -37,7 +37,10 @@ pub use limits::Limits;
 pub use multipart::Multipart;
 pub use part::Part;
 pub use selector::{SelectorAction, SelectorEngine};
-pub use storage::{MemoryStorage, NoopStorage, StorageEngine, StoredFile};
+pub use storage::{
+    DiskStorage, DiskStorageBuilder, FilenameStrategy, MemoryStorage, NoopStorage, StorageEngine,
+    StoredFile,
+};
 
 /// Main `rust-multer` entry point.
 #[derive(Debug)]

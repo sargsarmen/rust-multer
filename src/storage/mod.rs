@@ -2,8 +2,11 @@
 
 use crate::{Part, StorageError};
 
+/// Disk-backed storage backend implementation.
+pub mod disk;
 /// In-memory storage backend implementation.
 pub mod memory;
+pub use disk::{DiskStorage, DiskStorageBuilder, FilenameStrategy};
 pub use memory::MemoryStorage;
 
 /// Metadata describing a stored file.
@@ -19,6 +22,8 @@ pub struct StoredFile {
     pub content_type: mime::Mime,
     /// Persisted file size in bytes.
     pub size: u64,
+    /// Final filesystem path when stored on disk.
+    pub path: Option<std::path::PathBuf>,
 }
 
 /// Async trait abstraction for file storage backends.

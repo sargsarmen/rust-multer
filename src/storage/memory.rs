@@ -52,6 +52,7 @@ impl StorageEngine for MemoryStorage {
             file_name,
             content_type,
             size,
+            path: None,
         })
     }
 }
