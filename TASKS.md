@@ -1,420 +1,223 @@
-# rust-multer Execution Plan
+# rust-multer PRD Gap Execution Plan
 
-This plan is derived from `rust-multer-prd.docx` and split into 13 independent implementation tasks.
+This file tracks only the requirements still missing after comparing the current codebase with `docs/rust-multer-prd.docx`.
 
-## Ground Rules
+## How to Execute
 
 - Execute tasks in order.
-- Do not start the next task until the current task compile gate passes.
-- Keep each task in a separate branch and PR.
-- Keep public API additions backward compatible with previous completed tasks.
-- At the end of each task, run `cargo check` at minimum.
+- Keep each task in a separate PR.
+- Do not mark a task done until all checklist items and exit gates pass.
 
-## Suggested Branch Naming
+## Task 01 - Change Category: Package, Feature Flags, and Release Baseline
 
-- `task-01-bootstrap`
-- `task-02-config-model`
-- `task-03-error-model`
-- `task-04-builder-api`
-- `task-05-parse-primitives`
-- `task-06-stream-parser`
-- `task-07-part-api`
-- `task-08-selector-engine`
-- `task-09-limits-validation`
-- `task-10-storage-memory`
-- `task-11-storage-disk`
-- `task-12-core-e2e-tests`
-- `task-13-integrations-examples-ci`
+### Missing PRD Requirements
 
-## Target Layout
+- `11.3 Feature Flags`: missing default `tokio-rt` feature behavior.
+- `12 Cargo.toml Sketch`: metadata mismatch (`version`, `edition`, `rust-version`, `license`, `description`, `keywords`, `categories`).
+- `14 Acceptance Criteria`: MSRV 1.88 support is not enforced.
 
-```text
-src/
-  lib.rs
-  builder.rs
-  config.rs
-  error.rs
-  field.rs
-  limits.rs
-  multipart.rs
-  part.rs
-  parser/
-    mod.rs
-    boundary.rs
-    headers.rs
-    stream.rs
-  selector.rs
-  storage/
-    mod.rs
-    memory.rs
-    disk.rs
-  axum.rs            # feature = "axum"
-  actix.rs           # feature = "actix"
-tests/
-  parser_*.rs
-  selector_*.rs
-  limits_*.rs
-  storage_*.rs
-examples/
-  axum_basic.rs
-  actix_basic.rs
-  custom_storage.rs
-  streaming_large_file.rs
-  field_validation.rs
-benches/
-  upload_bench.rs
-```
+### Required Changes
 
-## Task 01: Bootstrap Crate and Module Skeleton
+- [ ] Add `tokio-rt` feature and make it part of `default`.
+- [ ] Align package metadata with PRD release expectations.
+- [ ] Set and enforce `rust-version = "1.88"`.
+- [ ] Ensure dependencies/features remain compatible with MSRV gate.
 
-### Files
-
-- `Cargo.toml`
-- `src/lib.rs`
-- `src/builder.rs`
-- `src/config.rs`
-- `src/error.rs`
-- `src/field.rs`
-- `src/limits.rs`
-- `src/multipart.rs`
-- `src/part.rs`
-- `src/parser/mod.rs`
-- `src/storage/mod.rs`
-
-### Checklist
-
-- [ ] Rename crate to `rust-multer` (or `rust_multer` package name if needed).
-- [ ] Add base dependencies (`bytes`, `futures`, `tokio`, `http`, `mime`, `thiserror`, `async-trait`, `uuid`, `pin-project`).
-- [ ] Add feature flags from PRD (`axum`, `actix`, `tracing`, `serde`) with minimal wiring.
-- [ ] Add empty module stubs and public re-exports from `lib.rs`.
-- [ ] Enable strict lints and `#![warn(missing_docs)]` in `lib.rs`.
-
-### Compile Gate
+### Exit Gate
 
 ```bash
-cargo check --all-targets
+cargo check --all-targets --all-features
+cargo +1.88.0 check --all-targets --all-features
 ```
 
-## Task 02: Configuration and Domain Model
+## Task 02 - Change Category: Streaming Parser and Memory-Safety Compliance
 
-### Files
+### Missing PRD Requirements
 
-- `src/config.rs`
-- `src/field.rs`
-- `src/limits.rs`
-- `src/lib.rs`
+- `F-PARSE-02`, `F-PARSE-06`: parser currently buffers full part bodies before yielding.
+- `F-LIMIT-07`, `9 Limit Enforcement`: limits must be enforced while streaming without full-file buffering.
+- `10 Performance Requirements`: current architecture does not guarantee low-RSS streaming path.
 
-### Checklist
+### Required Changes
 
-- [ ] Implement `Field` model for file and text fields.
-- [ ] Implement selectors: `single`, `array`, `fields`, `none`, `any`.
-- [ ] Implement `UnknownFieldPolicy` (`Reject`, `Ignore`).
-- [ ] Implement global limits model with defaults.
-- [ ] Ensure all public types derive `Debug`.
+- [ ] Redesign parser/part pipeline to stream file bytes incrementally (no full-part buffering).
+- [ ] Ensure file and body limits are enforced during chunk flow, before full payload accumulation.
+- [ ] Ensure disk storage can consume streamed chunks directly from parser.
+- [ ] Add large-file streaming tests to prove no OOM behavior on constrained memory profiles.
 
-### Compile Gate
+### Exit Gate
 
 ```bash
-cargo check --all-targets
+cargo test --test parser_streaming --test limits_enforcement --test storage_disk
+cargo run --example streaming_large_file
 ```
 
-## Task 03: Error Model and Config Validation
+## Task 03 - Change Category: RFC 7578 Edge-Case Parsing
 
-### Files
+### Missing PRD Requirements
 
-- `src/error.rs`
-- `src/config.rs`
-- `src/builder.rs`
-- `tests/config_validation.rs`
+- `F-PARSE-05`: percent-encoded boundary handling is missing.
+- `F-PARSE-05`: filename percent-encoding support must be complete (including edge-case coverage).
 
-### Checklist
+### Required Changes
 
-- [ ] Implement `MulterError` as `#[non_exhaustive]`.
-- [ ] Add config/build-time errors (`ConfigError`).
-- [ ] Add conversion points for parser/storage failures.
-- [ ] Validate conflicting selector configs and invalid limits.
-- [ ] Add unit tests for invalid configuration cases.
+- [ ] Support percent-encoded boundary parsing and normalization.
+- [ ] Expand filename percent-encoding support/tests for RFC-compliant behavior.
+- [ ] Add malformed percent-encoding rejection tests for boundary/filename paths.
 
-### Compile Gate
+### Exit Gate
 
 ```bash
-cargo check --all-targets
-cargo test --test config_validation
-```
-
-## Task 04: Fluent Builder API
-
-### Files
-
-- `src/builder.rs`
-- `src/lib.rs`
-- `tests/builder_api.rs`
-
-### Checklist
-
-- [ ] Implement `Multer::builder()`.
-- [ ] Implement fluent methods returning `Self`.
-- [ ] Implement `.build() -> Result<Multer<S>, ConfigError>`.
-- [ ] Ensure `MulterBuilder::default()` creates permissive dev config.
-- [ ] Add API behavior tests for chaining and defaults.
-
-### Compile Gate
-
-```bash
-cargo check --all-targets
-cargo test --test builder_api
-```
-
-## Task 05: Multipart Parse Primitives
-
-### Files
-
-- `src/parser/boundary.rs`
-- `src/parser/headers.rs`
-- `src/parser/mod.rs`
-- `tests/parser_boundary.rs`
-- `tests/parser_headers.rs`
-
-### Checklist
-
-- [ ] Extract and validate multipart boundary from `Content-Type`.
-- [ ] Parse `Content-Disposition` (`name`, `filename`) robustly.
-- [ ] Parse part `Content-Type` with `application/octet-stream` fallback.
-- [ ] Handle quoted values and RFC-safe normalization.
-- [ ] Add tests for malformed headers and malformed boundaries.
-
-### Compile Gate
-
-```bash
-cargo check --all-targets
 cargo test --test parser_boundary --test parser_headers
 ```
 
-## Task 06: Streaming Multipart State Machine
+## Task 04 - Change Category: Builder API and Validation Model Parity
 
-### Files
+### Missing PRD Requirements
 
-- `src/parser/stream.rs`
-- `src/multipart.rs`
-- `src/parser/mod.rs`
-- `tests/parser_streaming.rs`
+- `5.6 Fluent Builder API`: missing builder shortcuts (`max_file_size`, `max_files`, `max_field_size`, `max_fields`, `max_body_size`, `allowed_mime_types`).
+- `5.3 Limits & Validation`: per-field validation model in examples is not fully represented by public API.
+- `11.1 API Ergonomics`: PRD method surface differs from current builder naming and configuration flow.
 
-### Checklist
+### Required Changes
 
-- [ ] Implement streaming parser that yields parts lazily.
-- [ ] Avoid whole-body buffering.
-- [ ] Detect malformed boundaries and incomplete terminal boundaries.
-- [ ] Surface parse errors as structured `MulterError`.
-- [ ] Add streaming tests with chunked input.
+- [ ] Add fluent limit/mime methods directly on `MulterBuilder`.
+- [ ] Add builder method parity for unknown field behavior (`on_unknown_field` alias/primary API).
+- [ ] Reconcile `Field` model with selector/validation API used in PRD examples.
+- [ ] Add tests for all fluent methods and mixed per-field/global validation behavior.
 
-### Compile Gate
+### Exit Gate
 
 ```bash
-cargo check --all-targets
-cargo test --test parser_streaming
+cargo test --test builder_api --test config_validation --test selector_rules --test limits_enforcement
 ```
 
-## Task 07: Part API Surface
+## Task 05 - Change Category: Storage Trait and Backend Extensibility
 
-### Files
+### Missing PRD Requirements
 
-- `src/part.rs`
-- `src/multipart.rs`
-- `tests/part_api.rs`
+- `5.5 Storage Trait`: current trait signature does not match stream-based extensibility contract.
+- `5.4.2 Disk Storage`: missing optional per-file filter closure.
+- `5.4.2 Disk Storage`: builder naming/API differs (`destination`, `filename` expected).
 
-### Checklist
+### Required Changes
 
-- [ ] Implement `field_name()`, `file_name()`, `content_type()`, `headers()`.
-- [ ] Implement `bytes().await`, `text().await`, `stream()`, `size_hint()`.
-- [ ] Enforce single-pass semantics where required.
-- [ ] Add UTF-8 failure behavior in `text()` tests.
+- [ ] Refactor `StorageEngine` to stream-based store contract compatible with third-party backends.
+- [ ] Support backend-specific output type while preserving ergonomic defaults.
+- [ ] Add `DiskStorage` filter hook and PRD-aligned builder naming (`destination`, `filename`).
+- [ ] Keep filename sanitization secure-by-default and test traversal/null-byte cases.
 
-### Compile Gate
+### Exit Gate
 
 ```bash
-cargo check --all-targets
-cargo test --test part_api
+cargo test --test storage_conformance --test storage_memory --test storage_disk
+cargo run --example custom_storage
 ```
 
-## Task 08: Selector Engine and Field Matching
+## Task 06 - Change Category: Part and Multipart Public API Parity
 
-### Files
+### Missing PRD Requirements
 
-- `src/selector.rs`
-- `src/config.rs`
-- `src/multipart.rs`
-- `tests/selector_rules.rs`
+- `7 Part & Field API`: `headers()` should expose header map equivalent.
+- `7 Part & Field API`: `stream()` should be zero-copy oriented stream surface.
+- `7 Part & Field API`: `size_hint()` should reflect header/stream hint semantics.
+- `6.3 Framework-Agnostic Core`: expected `parse_stream(...)` API is missing.
 
-### Checklist
+### Required Changes
 
-- [ ] Enforce `.single`, `.array`, `.fields`, `.none`, `.any`.
-- [ ] Track per-field counts and reject excess counts.
-- [ ] Apply `UnknownFieldPolicy`.
-- [ ] Return `UnexpectedField` and count-limit errors consistently.
+- [ ] Add `Multipart::next_part()` ergonomic API (retain Stream impl compatibility).
+- [ ] Add/align `Multer::parse_stream(...)` for framework-agnostic ingestion.
+- [ ] Align `Part::headers()`, `Part::stream()`, and `Part::size_hint()` with PRD contract.
+- [ ] Add focused API tests for single-pass semantics and metadata fidelity.
 
-### Compile Gate
+### Exit Gate
 
 ```bash
-cargo check --all-targets
-cargo test --test selector_rules
+cargo test --test part_api --test e2e_core
 ```
 
-## Task 09: Streaming Limits and MIME Validation
+## Task 07 - Change Category: Axum and Actix First-Class Integrations
 
-### Files
+### Missing PRD Requirements
 
-- `src/limits.rs`
-- `src/multipart.rs`
-- `src/selector.rs`
-- `tests/limits_enforcement.rs`
+- `6.1 Axum`: no `MulterExtractor` implementing `FromRequest`.
+- `6.2 Actix-Web`: no middleware/data extractor surface matching PRD flow.
 
-### Checklist
+### Required Changes
 
-- [ ] Enforce `max_file_size` during stream read.
-- [ ] Enforce `max_files`, `max_field_size`, `max_fields`, `max_body_size`.
-- [ ] Enforce `allowed_mime_types` with wildcard support (`image/*`).
-- [ ] Ensure limit checks fail early before buffering large content.
+- [ ] Implement Axum extractor type(s) per PRD integration flow.
+- [ ] Implement Actix integration helpers/extractor/middleware surface per PRD flow.
+- [ ] Ensure integration APIs compose cleanly with `Multer<S>` state and `store(part)` workflow.
+- [ ] Add integration tests/doc examples for both frameworks.
 
-### Compile Gate
+### Exit Gate
 
 ```bash
-cargo check --all-targets
-cargo test --test limits_enforcement
-```
-
-## Task 10: Storage Engine Trait and MemoryStorage
-
-### Files
-
-- `src/storage/mod.rs`
-- `src/storage/memory.rs`
-- `src/lib.rs`
-- `tests/storage_memory.rs`
-
-### Checklist
-
-- [ ] Implement async `StorageEngine` trait.
-- [ ] Define output metadata type for stored files.
-- [ ] Implement `MemoryStorage`.
-- [ ] Integrate `Multer::store(part)` for memory backend.
-- [ ] Add storage conformance tests for memory backend.
-
-### Compile Gate
-
-```bash
-cargo check --all-targets
-cargo test --test storage_memory
-```
-
-## Task 11: DiskStorage and Filename Sanitization
-
-### Files
-
-- `src/storage/disk.rs`
-- `src/storage/mod.rs`
-- `tests/storage_disk.rs`
-
-### Checklist
-
-- [ ] Implement `DiskStorage::builder()`.
-- [ ] Implement filename strategy (`Keep`, `Random`, `Custom`).
-- [ ] Sanitize filenames to block traversal and unsafe characters.
-- [ ] Stream to disk with `tokio::fs` and low memory overhead.
-- [ ] Return final path and size metadata.
-
-### Compile Gate
-
-```bash
-cargo check --all-targets
-cargo test --test storage_disk
-```
-
-## Task 12: Core End-to-End Paths and Conformance Tests
-
-### Files
-
-- `src/lib.rs`
-- `src/multipart.rs`
-- `tests/e2e_core.rs`
-- `tests/storage_conformance.rs`
-
-### Checklist
-
-- [ ] Wire parser + selector + limits + storage in one execution path.
-- [ ] Add framework-agnostic parse entry points.
-- [ ] Add custom storage conformance tests (HashMap-like backend).
-- [ ] Add regression tests for malformed stream and policy behavior.
-
-### Compile Gate
-
-```bash
-cargo check --all-targets
-cargo test --tests
-```
-
-## Task 13: Axum/Actix Integrations, Examples, Docs, CI Gates
-
-### Files
-
-- `src/axum.rs`
-- `src/actix.rs`
-- `examples/axum_basic.rs`
-- `examples/actix_basic.rs`
-- `examples/custom_storage.rs`
-- `examples/streaming_large_file.rs`
-- `examples/field_validation.rs`
-- `README.md`
-- `CHANGELOG.md`
-- `.github/workflows/ci.yml`
-- `benches/upload_bench.rs`
-
-### Checklist
-
-- [ ] Implement Axum integration behind `axum` feature.
-- [ ] Implement Actix integration behind `actix` feature.
-- [ ] Add runnable examples from PRD use cases.
-- [ ] Add benchmark scaffold with Criterion.
-- [ ] Add CI gates for check, test, clippy, docs.
-- [ ] Ensure examples compile with feature flags.
-
-### Compile Gate
-
-```bash
-cargo check --all-targets
 cargo check --all-targets --features axum
 cargo check --all-targets --features actix
-cargo check --examples --all-features
-cargo test --all-features
-cargo clippy --all-targets --all-features -- -D warnings
+cargo run --example axum_basic --features axum
+cargo run --example actix_basic --features actix
 ```
 
-## Final Release Gate
+## Task 08 - Change Category: Tracing, Serde, and Developer Experience
 
-Run this only after all tasks are complete:
+### Missing PRD Requirements
+
+- `11.3 Feature Flags`: `tracing` and `serde` flags exist but are not fully wired to behavior/derives.
+- `11.1 API Ergonomics`: rustdoc runnable example coverage is incomplete.
+- `11.2 Examples & Documentation`: README lacks 5-minute quickstart for both Axum and Actix.
+- `11.2 Examples & Documentation`: changelog is not in Keep a Changelog structure.
+
+### Required Changes
+
+- [ ] Add `serde` derives behind feature flags on public configuration models.
+- [ ] Add meaningful `tracing` instrumentation in parser/limits/storage hot paths.
+- [ ] Expand rustdoc examples on core public APIs and verify compilation.
+- [ ] Rewrite README quickstart sections for Axum and Actix.
+- [ ] Reformat `CHANGELOG.md` to Keep a Changelog format.
+
+### Exit Gate
 
 ```bash
-cargo fmt --all --check
-cargo check --all-targets --all-features
-cargo test --all-features
-cargo clippy --all-targets --all-features -- -D warnings
+cargo test --doc --all-features
+cargo check --all-features
 ```
 
-## Optional Tracking Table
+## Task 09 - Change Category: CI, Security, Performance, and Release Acceptance
 
-Use this table to track completion:
+### Missing PRD Requirements
 
-| Task | Status | Branch | PR | Compile Gate Passed |
-|---|---|---|---|---|
-| 01 | DONE | `task-01-bootstrap` | - | YES |
-| 02 | DONE | `task-02-config-model` | - | YES |
-| 03 | DONE | `task-03-error-model` | - | YES |
-| 04 | DONE | `task-04-builder-api` | - | YES |
-| 05 | DONE | `task-05-parse-primitives` | - | YES |
-| 06 | DONE | `task-06-stream-parser` | - | YES |
-| 07 | DONE | `task-07-part-api` | - | YES |
-| 08 | DONE | `task-08-selector-engine` | - | YES |
-| 09 | DONE | `task-09-limits-validation` | - | YES |
-| 10 | DONE | `task-10-storage-memory` | - | YES |
-| 11 | DONE | `task-11-storage-disk` | - | YES |
-| 12 | DONE | `task-12-core-e2e-tests` | - | YES |
-| 13 | DONE | `task-13-integrations-examples-ci` | - | YES |
+- `10 Performance Requirements`: no automated acceptance gate for large-file memory behavior.
+- `14 Acceptance Criteria`: CI is Ubuntu-only; no macOS/Windows matrix.
+- `14 Acceptance Criteria`: no MSRV lane, no `cargo audit` gate, no benchmark regression run in CI.
+
+### Required Changes
+
+- [ ] Expand CI matrix to Linux/macOS/Windows.
+- [ ] Add dedicated MSRV 1.75 job.
+- [ ] Add `cargo audit` job (install `cargo-audit` in CI).
+- [ ] Add benchmark CI job and threshold/regression policy.
+- [ ] Add stress/integration scenario for multi-GB DiskStorage uploads and memory assertions.
+
+### Exit Gate
+
+```bash
+cargo test --all-features
+cargo clippy --all-targets --all-features -- -D warnings
+cargo audit
+cargo bench --bench upload_bench
+```
+
+## Tracking
+
+| Task | Category | Status |
+|---|---|---|
+| 01 | Package/Feature/Release Baseline | TODO |
+| 02 | Streaming Parser and Memory-Safety | TODO |
+| 03 | RFC 7578 Edge Cases | TODO |
+| 04 | Builder API and Validation Model | TODO |
+| 05 | Storage Trait and Backend Extensibility | TODO |
+| 06 | Part/Multipart Public API Parity | TODO |
+| 07 | Framework Integrations | TODO |
+| 08 | Tracing/Serde/DX Docs | TODO |
+| 09 | CI/Security/Performance Acceptance | TODO |
