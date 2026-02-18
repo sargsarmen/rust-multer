@@ -1,4 +1,6 @@
-use crate::limits::Limits;
+use std::collections::HashSet;
+
+use crate::{error::ConfigError, limits::Limits};
 
 /// Allowed file field declaration for `fields(...)` selector mode.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -22,6 +24,21 @@ impl SelectedField {
     pub fn with_max_count(mut self, max_count: usize) -> Self {
         self.max_count = Some(max_count);
         self
+    }
+
+    /// Validates a single selected field configuration.
+    pub fn validate(&self) -> Result<(), ConfigError> {
+        if self.name.trim().is_empty() {
+            return Err(ConfigError::EmptyFieldName);
+        }
+
+        if matches!(self.max_count, Some(0)) {
+            return Err(ConfigError::InvalidFieldMaxCount {
+                name: self.name.clone(),
+            });
+        }
+
+        Ok(())
     }
 }
 
@@ -76,6 +93,39 @@ impl Selector {
     pub fn any() -> Self {
         Self::Any
     }
+
+    /// Validates selector-specific constraints.
+    pub fn validate(&self) -> Result<(), ConfigError> {
+        match self {
+            Self::Single { name } => {
+                validate_field_name(name)?;
+            }
+            Self::Array { name, max_count } => {
+                validate_field_name(name)?;
+                if matches!(max_count, Some(0)) {
+                    return Err(ConfigError::InvalidArrayMaxCount { name: name.clone() });
+                }
+            }
+            Self::Fields(fields) => {
+                if fields.is_empty() {
+                    return Err(ConfigError::EmptyFieldsSelector);
+                }
+
+                let mut seen = HashSet::with_capacity(fields.len());
+                for field in fields {
+                    field.validate()?;
+                    if !seen.insert(field.name.clone()) {
+                        return Err(ConfigError::DuplicateFieldName {
+                            name: field.name.clone(),
+                        });
+                    }
+                }
+            }
+            Self::None | Self::Any => {}
+        }
+
+        Ok(())
+    }
 }
 
 impl Default for Selector {
@@ -110,4 +160,95 @@ impl MulterConfig {
     pub fn new() -> Self {
         Self::default()
     }
+
+    /// Validates selector and limit configuration.
+    pub fn validate(&self) -> Result<(), ConfigError> {
+        self.selector.validate()?;
+        validate_limits(&self.limits)?;
+        Ok(())
+    }
+}
+
+fn validate_field_name(name: &str) -> Result<(), ConfigError> {
+    if name.trim().is_empty() {
+        return Err(ConfigError::EmptyFieldName);
+    }
+
+    Ok(())
+}
+
+fn validate_limits(limits: &Limits) -> Result<(), ConfigError> {
+    validate_positive_u64("max_file_size", limits.max_file_size)?;
+    validate_positive_usize("max_files", limits.max_files)?;
+    validate_positive_u64("max_field_size", limits.max_field_size)?;
+    validate_positive_usize("max_fields", limits.max_fields)?;
+    validate_positive_u64("max_body_size", limits.max_body_size)?;
+
+    if let Some(max_body_size) = limits.max_body_size {
+        if let Some(max_file_size) = limits.max_file_size {
+            if max_file_size > max_body_size {
+                return Err(ConfigError::LimitExceedsBodySize {
+                    limit: "max_file_size",
+                    value: max_file_size,
+                    max_body_size,
+                });
+            }
+        }
+
+        if let Some(max_field_size) = limits.max_field_size {
+            if max_field_size > max_body_size {
+                return Err(ConfigError::LimitExceedsBodySize {
+                    limit: "max_field_size",
+                    value: max_field_size,
+                    max_body_size,
+                });
+            }
+        }
+    }
+
+    for pattern in &limits.allowed_mime_types {
+        if !is_valid_mime_pattern(pattern) {
+            return Err(ConfigError::InvalidMimePattern {
+                pattern: pattern.clone(),
+            });
+        }
+    }
+
+    Ok(())
+}
+
+fn validate_positive_u64(limit: &'static str, value: Option<u64>) -> Result<(), ConfigError> {
+    if matches!(value, Some(0)) {
+        return Err(ConfigError::InvalidLimitValue { limit });
+    }
+
+    Ok(())
+}
+
+fn validate_positive_usize(limit: &'static str, value: Option<usize>) -> Result<(), ConfigError> {
+    if matches!(value, Some(0)) {
+        return Err(ConfigError::InvalidLimitValue { limit });
+    }
+
+    Ok(())
+}
+
+fn is_valid_mime_pattern(pattern: &str) -> bool {
+    let Some((kind, subtype)) = pattern.split_once('/') else {
+        return false;
+    };
+
+    if kind.is_empty() || subtype.is_empty() {
+        return false;
+    }
+
+    if subtype == "*" {
+        return kind.chars().all(is_valid_mime_token_char);
+    }
+
+    pattern.parse::<mime::Mime>().is_ok()
+}
+
+fn is_valid_mime_token_char(c: char) -> bool {
+    c.is_ascii_alphanumeric() || matches!(c, '!' | '#' | '$' | '&' | '-' | '^' | '_' | '.' | '+')
 }
