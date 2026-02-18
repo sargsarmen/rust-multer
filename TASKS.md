@@ -411,7 +411,7 @@ Use this table to track completion:
 | 04 | DONE | `task-04-builder-api` | - | YES |
 | 05 | DONE | `task-05-parse-primitives` | - | YES |
 | 06 | DONE | `task-06-stream-parser` | - | YES |
-| 07 | TODO | `task-07-part-api` | - | No |
+| 07 | DONE | `task-07-part-api` | - | YES |
 | 08 | TODO | `task-08-selector-engine` | - | No |
 | 09 | TODO | `task-09-limits-validation` | - | No |
 | 10 | TODO | `task-10-storage-memory` | - | No |

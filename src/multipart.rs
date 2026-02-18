@@ -8,7 +8,8 @@ use futures::Stream;
 
 use crate::{
     MulterError, ParseError,
-    parser::stream::{MultipartStream, ParsedPart},
+    Part,
+    parser::stream::MultipartStream,
 };
 
 /// High-level multipart stream abstraction.
@@ -30,9 +31,14 @@ impl<S> Stream for Multipart<S>
 where
     S: Stream<Item = Result<Bytes, MulterError>> + Unpin,
 {
-    type Item = Result<ParsedPart, MulterError>;
+    type Item = Result<Part, MulterError>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        Pin::new(&mut self.inner).poll_next(cx)
+        match Pin::new(&mut self.inner).poll_next(cx) {
+            Poll::Ready(Some(Ok(parsed))) => Poll::Ready(Some(Ok(Part::from_parsed(parsed)))),
+            Poll::Ready(Some(Err(err))) => Poll::Ready(Some(Err(err))),
+            Poll::Ready(None) => Poll::Ready(None),
+            Poll::Pending => Poll::Pending,
+        }
     }
 }
