@@ -1,7 +1,15 @@
 //! Actix integration helpers.
 
+use std::{
+    future::{Future, Ready, ready},
+    pin::Pin,
+    task::{Context, Poll},
+};
+
 use actix_web::{
+    FromRequest,
     HttpRequest,
+    dev::{Service, ServiceRequest, ServiceResponse, Transform},
     error::PayloadError,
     http::header,
     web::{self, Bytes},
@@ -44,6 +52,112 @@ where
 {
     let content_type = content_type_from_request(request)?;
     multer.multipart_from_content_type(content_type, map_payload_stream(payload))
+}
+
+/// Helper that extracts multipart from an Actix request and payload.
+pub fn extract_multipart<S>(
+    multer: &Multer<S>,
+    request: &HttpRequest,
+    payload: web::Payload,
+) -> Result<Multipart<ActixBodyStream<web::Payload>>, MulterError>
+where
+    S: StorageEngine,
+{
+    multipart_from_request(multer, request, payload)
+}
+
+impl<S> Multer<S>
+where
+    S: StorageEngine,
+{
+    /// Parses an Actix request payload into a configured [`Multipart`] stream.
+    pub async fn parse(
+        &self,
+        request: HttpRequest,
+        payload: web::Payload,
+    ) -> Result<Multipart<ActixBodyStream<web::Payload>>, MulterError> {
+        multipart_from_request(self, &request, payload)
+    }
+}
+
+/// Actix extractor that provides `web::Data<Multer<S>>`.
+#[derive(Debug)]
+pub struct MulterData<S: StorageEngine>(pub web::Data<Multer<S>>);
+
+impl<S> std::ops::Deref for MulterData<S>
+where
+    S: StorageEngine,
+{
+    type Target = Multer<S>;
+
+    fn deref(&self) -> &Self::Target {
+        self.0.get_ref()
+    }
+}
+
+impl<S> Clone for MulterData<S>
+where
+    S: StorageEngine,
+{
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
+    }
+}
+
+impl<S> FromRequest for MulterData<S>
+where
+    S: StorageEngine,
+{
+    type Error = actix_web::Error;
+    type Future = Pin<Box<dyn Future<Output = Result<Self, Self::Error>>>>;
+
+    fn from_request(req: &HttpRequest, payload: &mut actix_web::dev::Payload) -> Self::Future {
+        let fut = web::Data::<Multer<S>>::from_request(req, payload);
+        Box::pin(async move { fut.await.map(Self) })
+    }
+}
+
+/// Pass-through middleware marker for Multer-enabled Actix apps.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct MulterMiddleware;
+
+impl<T, B> Transform<T, ServiceRequest> for MulterMiddleware
+where
+    T: Service<ServiceRequest, Response = ServiceResponse<B>, Error = actix_web::Error> + 'static,
+    B: 'static,
+{
+    type Response = ServiceResponse<B>;
+    type Error = actix_web::Error;
+    type InitError = ();
+    type Transform = MulterMiddlewareService<T>;
+    type Future = Ready<Result<Self::Transform, Self::InitError>>;
+
+    fn new_transform(&self, service: T) -> Self::Future {
+        ready(Ok(MulterMiddlewareService { service }))
+    }
+}
+
+/// Service implementation for [`MulterMiddleware`].
+#[derive(Debug)]
+pub struct MulterMiddlewareService<T> {
+    service: T,
+}
+
+impl<T, B> Service<ServiceRequest> for MulterMiddlewareService<T>
+where
+    T: Service<ServiceRequest, Response = ServiceResponse<B>, Error = actix_web::Error>,
+{
+    type Response = ServiceResponse<B>;
+    type Error = actix_web::Error;
+    type Future = T::Future;
+
+    fn poll_ready(&self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        self.service.poll_ready(cx)
+    }
+
+    fn call(&self, request: ServiceRequest) -> Self::Future {
+        self.service.call(request)
+    }
 }
 
 fn actix_item_to_multer(item: Result<Bytes, PayloadError>) -> Result<Bytes, MulterError> {

@@ -3,12 +3,15 @@
 #[cfg(feature = "actix")]
 use actix_web::{App, HttpRequest, HttpResponse, Responder, web};
 #[cfg(feature = "actix")]
-use rust_multer::{MemoryStorage, Multer};
+use rust_multer::{MemoryStorage, Multer, actix::MulterMiddleware};
 
 #[cfg(feature = "actix")]
-async fn upload(request: HttpRequest, payload: web::Payload) -> impl Responder {
-    let multer = Multer::new(MemoryStorage::new());
-    let mut multipart = match rust_multer::actix::multipart_from_request(&multer, &request, payload)
+async fn upload(
+    data: web::Data<Multer<MemoryStorage>>,
+    request: HttpRequest,
+    payload: web::Payload,
+) -> impl Responder {
+    let mut multipart = match data.parse(request, payload).await
     {
         Ok(value) => value,
         Err(err) => return HttpResponse::BadRequest().body(err.to_string()),
@@ -28,7 +31,11 @@ async fn upload(request: HttpRequest, payload: web::Payload) -> impl Responder {
 
 #[cfg(feature = "actix")]
 fn main() {
-    let _app = App::new().route("/upload", web::post().to(upload));
+    let multer = Multer::new(MemoryStorage::new());
+    let _app = App::new()
+        .wrap(MulterMiddleware)
+        .app_data(web::Data::new(multer))
+        .route("/upload", web::post().to(upload));
 }
 
 #[cfg(not(feature = "actix"))]

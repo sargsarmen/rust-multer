@@ -3,30 +3,21 @@
 #[cfg(feature = "axum")]
 use axum::{
     Router,
-    body::{Body, Bytes, to_bytes},
-    http::{HeaderMap, StatusCode},
+    extract::State,
+    http::StatusCode,
     routing::post,
 };
 #[cfg(feature = "axum")]
-use futures::stream;
+use std::sync::Arc;
 #[cfg(feature = "axum")]
-use rust_multer::{MemoryStorage, Multer, MulterError};
+use rust_multer::{MemoryStorage, Multer, axum::MulterExtractor};
 
 #[cfg(feature = "axum")]
-async fn upload(headers: HeaderMap, body: Body) -> Result<String, (StatusCode, String)> {
-    let multer = Multer::new(MemoryStorage::new());
-    let content_type = rust_multer::axum::content_type_from_headers(&headers)
-        .map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
-    let bytes: Bytes = to_bytes(body, usize::MAX)
-        .await
-        .map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
-
-    let mut multipart = multer
-        .multipart_from_content_type(
-            content_type,
-            stream::iter([Ok::<Bytes, MulterError>(bytes)]),
-        )
-        .map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
+async fn upload(
+    State(multer): State<Arc<Multer<MemoryStorage>>>,
+    MulterExtractor(mut multipart): MulterExtractor,
+) -> Result<String, (StatusCode, String)> {
+    let _ = multer;
 
     let mut count = 0usize;
     while multipart
@@ -43,7 +34,10 @@ async fn upload(headers: HeaderMap, body: Body) -> Result<String, (StatusCode, S
 
 #[cfg(feature = "axum")]
 fn main() {
-    let _app: Router<()> = Router::new().route("/upload", post(upload));
+    let multer = Arc::new(Multer::new(MemoryStorage::new()));
+    let _app: Router<()> = Router::new()
+        .route("/upload", post(upload))
+        .with_state(multer);
 }
 
 #[cfg(not(feature = "axum"))]

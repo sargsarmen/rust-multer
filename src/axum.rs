@@ -1,16 +1,98 @@
 //! Axum integration helpers.
 
 use axum::{
+    extract::FromRequest,
     body::Bytes,
-    http::{HeaderMap, header},
+    body::to_bytes,
+    http::{HeaderMap, StatusCode, header},
+    response::{IntoResponse, Response},
 };
-use futures::{Stream, StreamExt};
+use futures::{Stream, StreamExt, stream};
+use std::sync::Arc;
 
 use crate::{Multer, MulterError, Multipart, ParseError, StorageEngine};
 
 /// Axum body stream mapped into `rust-multer` chunk errors.
 pub type AxumBodyStream<S> =
-    futures::stream::Map<S, fn(Result<Bytes, axum::Error>) -> Result<Bytes, MulterError>>;
+    stream::Map<S, fn(Result<Bytes, axum::Error>) -> Result<Bytes, MulterError>>;
+
+/// Axum multipart type used by [`MulterExtractor`].
+pub type AxumMultipart =
+    Multipart<stream::Iter<std::array::IntoIter<Result<Bytes, MulterError>, 1>>>;
+
+/// Rejection type returned by Axum integration extractors.
+#[derive(Debug)]
+pub struct AxumMulterRejection(pub MulterError);
+
+impl IntoResponse for AxumMulterRejection {
+    fn into_response(self) -> Response {
+        (StatusCode::BAD_REQUEST, self.0.to_string()).into_response()
+    }
+}
+
+/// Trait implemented by Axum state types that can build `Multipart` via `Multer`.
+pub trait MulterState {
+    /// Builds multipart from content type and full body bytes.
+    fn build_multipart(
+        &self,
+        content_type: &str,
+        body: Bytes,
+    ) -> Result<AxumMultipart, MulterError>;
+}
+
+impl<S> MulterState for Multer<S>
+where
+    S: StorageEngine,
+{
+    fn build_multipart(
+        &self,
+        content_type: &str,
+        body: Bytes,
+    ) -> Result<AxumMultipart, MulterError> {
+        self.multipart_from_content_type(content_type, stream::iter([Ok(body)]))
+    }
+}
+
+impl<S> MulterState for Arc<Multer<S>>
+where
+    S: StorageEngine,
+{
+    fn build_multipart(
+        &self,
+        content_type: &str,
+        body: Bytes,
+    ) -> Result<AxumMultipart, MulterError> {
+        self.as_ref().build_multipart(content_type, body)
+    }
+}
+
+/// Extractor that parses request body into [`Multipart`] using `Multer` state.
+#[derive(Debug)]
+pub struct MulterExtractor(pub AxumMultipart);
+
+impl<AppState> FromRequest<AppState> for MulterExtractor
+where
+    AppState: Send + Sync + MulterState,
+{
+    type Rejection = AxumMulterRejection;
+
+    async fn from_request(
+        request: axum::extract::Request,
+        state: &AppState,
+    ) -> Result<Self, Self::Rejection> {
+        let (parts, body) = request.into_parts();
+        let content_type = content_type_from_headers(&parts.headers).map_err(AxumMulterRejection)?;
+        let body = to_bytes(body, usize::MAX).await.map_err(|err| {
+            AxumMulterRejection(ParseError::new(format!("axum body read error: {err}")).into())
+        })?;
+
+        let multipart = state
+            .build_multipart(content_type, body)
+            .map_err(AxumMulterRejection)?;
+
+        Ok(Self(multipart))
+    }
+}
 
 /// Extracts the raw `Content-Type` header from Axum request headers.
 pub fn content_type_from_headers(headers: &HeaderMap) -> Result<&str, MulterError> {

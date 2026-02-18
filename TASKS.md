@@ -145,10 +145,10 @@ cargo test --test part_api --test e2e_core
 
 ### Required Changes
 
-- [ ] Implement Axum extractor type(s) per PRD integration flow.
-- [ ] Implement Actix integration helpers/extractor/middleware surface per PRD flow.
-- [ ] Ensure integration APIs compose cleanly with `Multer<S>` state and `store(part)` workflow.
-- [ ] Add integration tests/doc examples for both frameworks.
+- [x] Implement Axum extractor type(s) per PRD integration flow.
+- [x] Implement Actix integration helpers/extractor/middleware surface per PRD flow.
+- [x] Ensure integration APIs compose cleanly with `Multer<S>` state and `store(part)` workflow.
+- [x] Add integration tests/doc examples for both frameworks.
 
 ### Exit Gate
 
@@ -218,6 +218,6 @@ cargo bench --bench upload_bench
 | 04 | Builder API and Validation Model | DONE |
 | 05 | Storage Trait and Backend Extensibility | DONE |
 | 06 | Part/Multipart Public API Parity | DONE |
-| 07 | Framework Integrations | TODO |
+| 07 | Framework Integrations | DONE |
 | 08 | Tracing/Serde/DX Docs | TODO |
 | 09 | CI/Security/Performance Acceptance | TODO |
