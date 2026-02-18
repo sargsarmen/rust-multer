@@ -69,6 +69,8 @@ where
 
             let headers = poll_fn(|cx| self.inner.poll_next_part_headers(cx)).await?;
             let Some(headers) = headers else {
+                #[cfg(feature = "tracing")]
+                tracing::debug!("multipart: reached end of stream");
                 return Ok(None);
             };
 
@@ -76,10 +78,21 @@ where
                 self.field_count += 1;
                 if let Some(max_fields) = self.limits.max_fields {
                     if self.field_count > max_fields {
+                        #[cfg(feature = "tracing")]
+                        tracing::warn!(
+                            max_fields = max_fields,
+                            seen_fields = self.field_count,
+                            "multipart: text field limit exceeded"
+                        );
                         return Err(MulterError::FieldsLimitExceeded { max_fields });
                     }
                 }
 
+                #[cfg(feature = "tracing")]
+                tracing::debug!(
+                    field_name = headers.field_name.as_str(),
+                    "multipart: yielding text part"
+                );
                 return Ok(Some(Part::new(headers, &mut self.inner)));
             }
 
@@ -87,6 +100,12 @@ where
                 Ok(SelectorAction::Accept) => {
                     if let Some(patterns) = self.selector.field_allowed_mime_types(&headers.field_name) {
                         if !patterns.is_empty() && !mime_matches_any(&headers.content_type, patterns) {
+                            #[cfg(feature = "tracing")]
+                            tracing::warn!(
+                                field_name = headers.field_name.as_str(),
+                                mime = headers.content_type.essence_str(),
+                                "multipart: rejected by per-field MIME allowlist"
+                            );
                             return Err(MulterError::MimeTypeNotAllowed {
                                 field: headers.field_name.clone(),
                                 mime: headers.content_type.essence_str().to_owned(),
@@ -95,6 +114,12 @@ where
                     }
 
                     if !self.limits.is_mime_allowed(&headers.content_type) {
+                        #[cfg(feature = "tracing")]
+                        tracing::warn!(
+                            field_name = headers.field_name.as_str(),
+                            mime = headers.content_type.essence_str(),
+                            "multipart: rejected by global MIME allowlist"
+                        );
                         return Err(MulterError::MimeTypeNotAllowed {
                             field: headers.field_name.clone(),
                             mime: headers.content_type.essence_str().to_owned(),
@@ -104,13 +129,31 @@ where
                     self.file_count += 1;
                     if let Some(max_files) = self.limits.max_files {
                         if self.file_count > max_files {
+                            #[cfg(feature = "tracing")]
+                            tracing::warn!(
+                                max_files = max_files,
+                                seen_files = self.file_count,
+                                "multipart: file count limit exceeded"
+                            );
                             return Err(MulterError::FilesLimitExceeded { max_files });
                         }
                     }
 
+                    #[cfg(feature = "tracing")]
+                    tracing::debug!(
+                        field_name = headers.field_name.as_str(),
+                        file_name = headers.file_name.as_deref().unwrap_or("<none>"),
+                        mime = headers.content_type.essence_str(),
+                        "multipart: yielding file part"
+                    );
                     return Ok(Some(Part::new(headers, &mut self.inner)));
                 }
                 Ok(SelectorAction::Ignore) => {
+                    #[cfg(feature = "tracing")]
+                    tracing::debug!(
+                        field_name = headers.field_name.as_str(),
+                        "multipart: ignoring unmatched file field"
+                    );
                     self.inner.drain_current_part().await?;
                     continue;
                 }

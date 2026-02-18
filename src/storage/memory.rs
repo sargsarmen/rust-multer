@@ -48,6 +48,14 @@ impl StorageEngine for MemoryStorage {
         content_type: &str,
         mut stream: BoxStream<'_, Result<Bytes, MulterError>>,
     ) -> Result<Self::Output, Self::Error> {
+        #[cfg(feature = "tracing")]
+        tracing::debug!(
+            field_name = field_name,
+            file_name = file_name.unwrap_or("<none>"),
+            content_type = content_type,
+            "memory storage: begin streaming store"
+        );
+
         let mut body = Vec::new();
         while let Some(chunk) = stream.next().await {
             let chunk = chunk.map_err(|err| StorageError::new(err.to_string()))?;
@@ -62,6 +70,14 @@ impl StorageEngine for MemoryStorage {
             .unwrap_or(mime::APPLICATION_OCTET_STREAM);
 
         self.files.write().await.insert(storage_key.clone(), body);
+
+        #[cfg(feature = "tracing")]
+        tracing::debug!(
+            field_name = field_name,
+            storage_key = storage_key.as_str(),
+            size = size,
+            "memory storage: completed store"
+        );
 
         Ok(StoredFile {
             storage_key,

@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use crate::{error::ConfigError, limits::Limits};
 
 /// Allowed file field declaration for `fields(...)` selector mode.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SelectedField {
     /// Logical field name.
@@ -78,6 +79,7 @@ impl SelectedField {
 }
 
 /// Strategy for matching incoming file fields.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Selector {
     /// Accept a single file for one named field.
@@ -170,6 +172,7 @@ impl Default for Selector {
 }
 
 /// Policy for handling fields not described by the active selector.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum UnknownFieldPolicy {
     /// Reject unknown fields with an error.
@@ -180,6 +183,7 @@ pub enum UnknownFieldPolicy {
 }
 
 /// Top-level multipart configuration model.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct MulterConfig {
     /// Selector strategy for file fields.

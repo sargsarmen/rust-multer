@@ -172,6 +172,15 @@ impl StorageEngine for DiskStorage {
         content_type: &str,
         mut stream: BoxStream<'_, Result<Bytes, MulterError>>,
     ) -> Result<Self::Output, Self::Error> {
+        #[cfg(feature = "tracing")]
+        tracing::debug!(
+            field_name = field_name,
+            file_name = file_name.unwrap_or("<none>"),
+            content_type = content_type,
+            root = %self.root.display(),
+            "disk storage: begin streaming store"
+        );
+
         let accepted_meta = FileMeta {
             field_name: field_name.to_owned(),
             file_name: file_name.map(ToOwned::to_owned),
@@ -179,6 +188,12 @@ impl StorageEngine for DiskStorage {
             size_hint: None,
         };
         if !self.should_store(&accepted_meta) {
+            #[cfg(feature = "tracing")]
+            tracing::warn!(
+                field_name = field_name,
+                file_name = file_name.unwrap_or("<none>"),
+                "disk storage filter rejected file"
+            );
             return Err(StorageError::new(format!(
                 "disk storage filter rejected file field `{field_name}`"
             )));
@@ -195,6 +210,11 @@ impl StorageEngine for DiskStorage {
             .await
             .map_err(|err| StorageError::new(format!("failed to inspect output path: {err}")))?
         {
+            #[cfg(feature = "tracing")]
+            tracing::debug!(
+                path = %output_path.display(),
+                "disk storage: collision detected, adding suffix"
+            );
             output_path = with_collision_suffix(&output_path);
         }
 
@@ -220,6 +240,13 @@ impl StorageEngine for DiskStorage {
         let parsed_content_type = content_type
             .parse::<mime::Mime>()
             .unwrap_or(mime::APPLICATION_OCTET_STREAM);
+        #[cfg(feature = "tracing")]
+        tracing::debug!(
+            field_name = field_name,
+            size = written,
+            path = %output_path.display(),
+            "disk storage: completed store"
+        );
         Ok(StoredFile {
             storage_key,
             field_name: field_name.to_owned(),

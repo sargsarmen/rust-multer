@@ -61,6 +61,9 @@ impl<'a> Part<'a> {
     }
 
     /// Returns raw part headers.
+    ///
+    /// `headers()` exposes the original map for advanced inspection, while
+    /// [`Part::parsed_headers`] provides the normalized view.
     pub fn headers(&self) -> &HeaderMap {
         &self.headers.headers
     }
@@ -71,6 +74,9 @@ impl<'a> Part<'a> {
     }
 
     /// Returns the approximate body size hint in bytes from `Content-Length`, when present.
+    ///
+    /// The hint may be `None` when the incoming part does not declare a
+    /// `Content-Length` header.
     pub fn size_hint(&self) -> Option<u64> {
         self.headers
             .headers
@@ -97,6 +103,9 @@ impl<'a> Part<'a> {
     }
 
     /// Returns a one-shot body stream for this part.
+    ///
+    /// The returned stream can only be created once; subsequent calls return an
+    /// "already consumed" error.
     pub fn stream(&mut self) -> Result<BoxStream<'_, Result<Bytes, MulterError>>, MulterError> {
         let Some(body_reader) = self.body_reader.take() else {
             return Err(ParseError::new("part body was already consumed").into());

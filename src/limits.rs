@@ -1,4 +1,5 @@
 /// Request and field limits enforced during multipart parsing.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Limits {
     /// Maximum accepted file size in bytes for a single file part.
@@ -29,9 +30,21 @@ impl Limits {
             return true;
         }
 
-        self.allowed_mime_types
+        let allowed = self
+            .allowed_mime_types
             .iter()
-            .any(|pattern| mime_matches_pattern(mime, pattern))
+            .any(|pattern| mime_matches_pattern(mime, pattern));
+
+        #[cfg(feature = "tracing")]
+        if !allowed {
+            tracing::debug!(
+                mime = mime.essence_str(),
+                allowed_patterns = ?self.allowed_mime_types,
+                "limits: MIME rejected by global allowlist"
+            );
+        }
+
+        allowed
     }
 }
 

@@ -78,6 +78,13 @@ pub struct Multer<S = NoopStorage> {
 
 impl<S> Multer<S> {
     /// Creates a new multer instance with the given storage backend.
+    ///
+    /// ```rust
+    /// use rust_multer::{MemoryStorage, Multer};
+    ///
+    /// let multer = Multer::new(MemoryStorage::new());
+    /// assert!(multer.config().limits.allowed_mime_types.is_empty());
+    /// ```
     pub fn new(storage: S) -> Self {
         Self {
             config: MulterConfig::default(),
@@ -113,6 +120,14 @@ where
         let content_type = part.content_type().to_string();
         let stream = part.stream()?;
 
+        #[cfg(feature = "tracing")]
+        tracing::debug!(
+            field_name = field_name.as_str(),
+            file_name = file_name.as_deref().unwrap_or("<none>"),
+            content_type = content_type.as_str(),
+            "multer: dispatching part to storage engine"
+        );
+
         self.storage
             .store(&field_name, file_name.as_deref(), &content_type, stream)
             .await
@@ -145,6 +160,24 @@ where
     }
 
     /// Creates a configured multipart parser from any `AsyncRead` body stream.
+    ///
+    /// ```rust
+    /// use rust_multer::{MemoryStorage, Multer};
+    /// use tokio::io::AsyncWriteExt;
+    ///
+    /// # #[tokio::main(flavor = "current_thread")]
+    /// # async fn main() {
+    /// let multer = Multer::new(MemoryStorage::new());
+    /// let body = b"--BOUND\r\nContent-Disposition: form-data; name=\"field\"\r\n\r\nvalue\r\n--BOUND--\r\n";
+    /// let (mut writer, reader) = tokio::io::duplex(1024);
+    /// writer.write_all(body).await.expect("write body");
+    /// drop(writer);
+    ///
+    /// let mut multipart = multer.parse_stream(reader, "BOUND").await.expect("parse stream");
+    /// let mut part = multipart.next_part().await.expect("next part").expect("part");
+    /// assert_eq!(part.text().await.expect("text"), "value");
+    /// # }
+    /// ```
     pub async fn parse_stream<R>(
         &self,
         stream: R,
@@ -157,6 +190,34 @@ where
     }
 
     /// Parses multipart input and stores all file parts using the active storage backend.
+    ///
+    /// ```rust
+    /// use bytes::Bytes;
+    /// use futures::stream;
+    /// use rust_multer::{MemoryStorage, Multer, MulterError};
+    ///
+    /// # #[tokio::main(flavor = "current_thread")]
+    /// # async fn main() {
+    /// let multer = Multer::new(MemoryStorage::new());
+    /// let body = concat!(
+    ///     "--BOUND\r\n",
+    ///     "Content-Disposition: form-data; name=\"file\"; filename=\"a.txt\"\r\n",
+    ///     "\r\n",
+    ///     "hello\r\n",
+    ///     "--BOUND--\r\n"
+    /// );
+    ///
+    /// let output = multer
+    ///     .parse_and_store(
+    ///         "BOUND",
+    ///         stream::iter([Ok::<Bytes, MulterError>(Bytes::from_static(body.as_bytes()))]),
+    ///     )
+    ///     .await
+    ///     .expect("parse and store");
+    ///
+    /// assert_eq!(output.stored_files.len(), 1);
+    /// # }
+    /// ```
     pub async fn parse_and_store<T>(
         &self,
         boundary: impl Into<String>,
@@ -170,11 +231,15 @@ where
 
         while let Some(mut part) = multipart.next_part().await? {
             if part.file_name().is_some() {
+                #[cfg(feature = "tracing")]
+                tracing::trace!(field_name = part.field_name(), "multer: storing file part");
                 let stored = self.store(part).await?;
                 out.stored_files.push(stored);
             } else {
                 let field_name = part.field_name().to_owned();
                 let text = part.text().await?;
+                #[cfg(feature = "tracing")]
+                tracing::trace!(field_name = field_name.as_str(), "multer: captured text part");
                 out.text_fields.push((field_name, text));
             }
         }
@@ -196,6 +261,19 @@ fn async_read_item_to_multer(item: Result<Bytes, std::io::Error>) -> Result<Byte
 
 impl Multer<NoopStorage> {
     /// Creates a fluent builder with permissive defaults.
+    ///
+    /// ```rust
+    /// use rust_multer::{Multer, UnknownFieldPolicy};
+    ///
+    /// let multer = Multer::builder()
+    ///     .any()
+    ///     .max_files(5)
+    ///     .on_unknown_field(UnknownFieldPolicy::Reject)
+    ///     .build()
+    ///     .expect("builder config");
+    ///
+    /// assert_eq!(multer.config().limits.max_files, Some(5));
+    /// ```
     pub fn builder() -> MulterBuilder {
         MulterBuilder::default()
     }

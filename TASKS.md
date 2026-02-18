@@ -170,11 +170,11 @@ cargo run --example actix_basic --features actix
 
 ### Required Changes
 
-- [ ] Add `serde` derives behind feature flags on public configuration models.
-- [ ] Add meaningful `tracing` instrumentation in parser/limits/storage hot paths.
-- [ ] Expand rustdoc examples on core public APIs and verify compilation.
-- [ ] Rewrite README quickstart sections for Axum and Actix.
-- [ ] Reformat `CHANGELOG.md` to Keep a Changelog format.
+- [x] Add `serde` derives behind feature flags on public configuration models.
+- [x] Add meaningful `tracing` instrumentation in parser/limits/storage hot paths.
+- [x] Expand rustdoc examples on core public APIs and verify compilation.
+- [x] Rewrite README quickstart sections for Axum and Actix.
+- [x] Reformat `CHANGELOG.md` to Keep a Changelog format.
 
 ### Exit Gate
 
@@ -219,5 +219,5 @@ cargo bench --bench upload_bench
 | 05 | Storage Trait and Backend Extensibility | DONE |
 | 06 | Part/Multipart Public API Parity | DONE |
 | 07 | Framework Integrations | DONE |
-| 08 | Tracing/Serde/DX Docs | TODO |
+| 08 | Tracing/Serde/DX Docs | DONE |
 | 09 | CI/Security/Performance Acceptance | TODO |

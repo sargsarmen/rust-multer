@@ -115,15 +115,21 @@ impl<S> MultipartStream<S> {
                     };
 
                     if line == self.boundary_line {
+                        #[cfg(feature = "tracing")]
+                        tracing::trace!("multipart parser: opening boundary detected");
                         self.state = ParseState::Headers;
                         continue;
                     }
 
                     if line == self.boundary_end_line {
+                        #[cfg(feature = "tracing")]
+                        tracing::trace!("multipart parser: immediate terminal boundary detected");
                         self.state = ParseState::End;
                         continue;
                     }
 
+                    #[cfg(feature = "tracing")]
+                    tracing::warn!("multipart parser: malformed opening boundary");
                     self.state = ParseState::Failed;
                     return Poll::Ready(Err(ParseError::new("malformed opening boundary").into()));
                 }
@@ -146,6 +152,8 @@ impl<S> MultipartStream<S> {
                     let headers = match parse_header_block(&raw).and_then(|h| parse_part_headers(&h)) {
                         Ok(headers) => headers,
                         Err(err) => {
+                            #[cfg(feature = "tracing")]
+                            tracing::warn!(error = %err, "multipart parser: failed to parse part headers");
                             self.state = ParseState::Failed;
                             return Poll::Ready(Err(err.into()));
                         }
@@ -160,6 +168,12 @@ impl<S> MultipartStream<S> {
                     self.current_part_size = 0;
                     self.current_headers = Some(headers.clone());
                     self.state = ParseState::Body;
+                    #[cfg(feature = "tracing")]
+                    tracing::trace!(
+                        field_name = headers.field_name.as_str(),
+                        file = headers.file_name.is_some(),
+                        "multipart parser: part headers parsed"
+                    );
                     return Poll::Ready(Ok(Some(headers)));
                 }
                 ParseState::Body => {
@@ -231,8 +245,12 @@ impl<S> MultipartStream<S> {
                 self.current_part_size = 0;
                 self.current_part_is_file = false;
                 self.state = if is_terminal {
+                    #[cfg(feature = "tracing")]
+                    tracing::trace!("multipart parser: terminal boundary reached");
                     ParseState::End
                 } else {
+                    #[cfg(feature = "tracing")]
+                    tracing::trace!("multipart parser: moving to next part headers");
                     ParseState::Headers
                 };
 
@@ -244,6 +262,8 @@ impl<S> MultipartStream<S> {
                 &self.boundary_line,
                 &self.boundary_end_line,
             ) {
+                #[cfg(feature = "tracing")]
+                tracing::warn!("multipart parser: malformed boundary line detected");
                 self.state = ParseState::Failed;
                 return Poll::Ready(Err(ParseError::new("malformed multipart boundary").into()));
             }
@@ -263,6 +283,8 @@ impl<S> MultipartStream<S> {
             }
 
             if self.upstream_done {
+                #[cfg(feature = "tracing")]
+                tracing::warn!("multipart parser: upstream ended before terminal boundary");
                 self.state = ParseState::Failed;
                 return Poll::Ready(Err(MulterError::IncompleteStream));
             }
@@ -302,6 +324,12 @@ impl<S> MultipartStream<S> {
                     if let Some(max_body_size) = self.limits.max_body_size {
                         let next = self.received_body_bytes.saturating_add(chunk.len() as u64);
                         if next > max_body_size {
+                            #[cfg(feature = "tracing")]
+                            tracing::warn!(
+                                max_body_size = max_body_size,
+                                received = next,
+                                "multipart parser: body size limit exceeded"
+                            );
                             self.state = ParseState::Failed;
                             return Err(MulterError::BodySizeLimitExceeded { max_body_size });
                         }
@@ -339,11 +367,23 @@ impl<S> MultipartStream<S> {
             .unwrap_or_else(|| "<unknown>".to_owned());
 
         if self.current_part_is_file {
+            #[cfg(feature = "tracing")]
+            tracing::warn!(
+                field = field.as_str(),
+                max_file_size = limit,
+                "multipart parser: file size limit exceeded"
+            );
             Err(MulterError::FileSizeLimitExceeded {
                 field,
                 max_file_size: limit,
             })
         } else {
+            #[cfg(feature = "tracing")]
+            tracing::warn!(
+                field = field.as_str(),
+                max_field_size = limit,
+                "multipart parser: field size limit exceeded"
+            );
             Err(MulterError::FieldSizeLimitExceeded {
                 field,
                 max_field_size: limit,
