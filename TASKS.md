@@ -416,5 +416,5 @@ Use this table to track completion:
 | 09 | DONE | `task-09-limits-validation` | - | YES |
 | 10 | DONE | `task-10-storage-memory` | - | YES |
 | 11 | DONE | `task-11-storage-disk` | - | YES |
-| 12 | TODO | `task-12-core-e2e-tests` | - | No |
+| 12 | DONE | `task-12-core-e2e-tests` | - | YES |
 | 13 | TODO | `task-13-integrations-examples-ci` | - | No |
