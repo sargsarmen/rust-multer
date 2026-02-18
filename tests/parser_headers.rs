@@ -26,6 +26,13 @@ fn parses_escaped_quoted_values() {
 }
 
 #[test]
+fn parses_percent_encoded_filename_parameter() {
+    let parsed = parse_content_disposition("form-data; name=\"file\"; filename=\"hello%20world.txt\"")
+        .expect("header should parse");
+    assert_eq!(parsed.filename.as_deref(), Some("hello world.txt"));
+}
+
+#[test]
 fn filename_star_takes_precedence_over_filename() {
     let parsed = parse_content_disposition(
         "form-data; name=\"upload\"; filename=\"fallback.txt\"; filename*=UTF-8''real%20name.txt",
@@ -93,6 +100,13 @@ fn rejects_form_data_without_non_empty_name() {
 fn rejects_invalid_part_content_type() {
     let err = parse_part_content_type(Some("not-a/type?")).expect_err("must fail");
     assert_err_contains(&err.to_string(), "invalid part Content-Type");
+}
+
+#[test]
+fn rejects_malformed_percent_encoding_in_filename_parameter() {
+    let err = parse_content_disposition("form-data; name=\"file\"; filename=\"bad%2\"")
+        .expect_err("must fail");
+    assert_err_contains(&err.to_string(), "percent-encoding");
 }
 
 fn assert_err_contains(actual: &str, expected_fragment: &str) {

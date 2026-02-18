@@ -18,8 +18,9 @@ pub fn extract_multipart_boundary(content_type: &str) -> Result<String, ParseErr
         .map(|value| value.as_str())
         .ok_or_else(|| ParseError::new("missing multipart boundary parameter"))?;
 
-    validate_boundary(boundary)?;
-    Ok(boundary.to_owned())
+    let boundary = decode_boundary_percent_encoding(boundary)?;
+    validate_boundary(&boundary)?;
+    Ok(boundary)
 }
 
 fn validate_boundary(boundary: &str) -> Result<(), ParseError> {
@@ -44,6 +45,45 @@ fn validate_boundary(boundary: &str) -> Result<(), ParseError> {
     }
 
     Ok(())
+}
+
+fn decode_boundary_percent_encoding(boundary: &str) -> Result<String, ParseError> {
+    if !boundary.as_bytes().contains(&b'%') {
+        return Ok(boundary.to_owned());
+    }
+
+    let mut bytes = Vec::with_capacity(boundary.len());
+    let raw = boundary.as_bytes();
+    let mut index = 0usize;
+
+    while index < raw.len() {
+        if raw[index] == b'%' {
+            if index + 2 >= raw.len() {
+                return Err(ParseError::new("invalid percent-encoding in multipart boundary"));
+            }
+
+            let hi = hex_value(raw[index + 1])?;
+            let lo = hex_value(raw[index + 2])?;
+            bytes.push((hi << 4) | lo);
+            index += 3;
+            continue;
+        }
+
+        bytes.push(raw[index]);
+        index += 1;
+    }
+
+    String::from_utf8(bytes)
+        .map_err(|_| ParseError::new("multipart boundary percent-encoding is not valid UTF-8"))
+}
+
+fn hex_value(byte: u8) -> Result<u8, ParseError> {
+    match byte {
+        b'0'..=b'9' => Ok(byte - b'0'),
+        b'a'..=b'f' => Ok(byte - b'a' + 10),
+        b'A'..=b'F' => Ok(byte - b'A' + 10),
+        _ => Err(ParseError::new("invalid percent-encoding in multipart boundary")),
+    }
 }
 
 fn is_boundary_char(c: char) -> bool {

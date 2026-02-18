@@ -61,9 +61,9 @@ cargo run --example streaming_large_file
 
 ### Required Changes
 
-- [ ] Support percent-encoded boundary parsing and normalization.
-- [ ] Expand filename percent-encoding support/tests for RFC-compliant behavior.
-- [ ] Add malformed percent-encoding rejection tests for boundary/filename paths.
+- [x] Support percent-encoded boundary parsing and normalization.
+- [x] Expand filename percent-encoding support/tests for RFC-compliant behavior.
+- [x] Add malformed percent-encoding rejection tests for boundary/filename paths.
 
 ### Exit Gate
 
@@ -214,7 +214,7 @@ cargo bench --bench upload_bench
 |---|---|---|
 | 01 | Package/Feature/Release Baseline | DONE |
 | 02 | Streaming Parser and Memory-Safety | DONE |
-| 03 | RFC 7578 Edge Cases | TODO |
+| 03 | RFC 7578 Edge Cases | DONE |
 | 04 | Builder API and Validation Model | TODO |
 | 05 | Storage Trait and Backend Extensibility | TODO |
 | 06 | Part/Multipart Public API Parity | TODO |

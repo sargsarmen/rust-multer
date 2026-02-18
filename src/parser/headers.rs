@@ -58,7 +58,7 @@ pub fn parse_content_disposition(value: &str) -> Result<ContentDisposition, Pars
 
         match key.as_str() {
             "name" => name = Some(decoded),
-            "filename" => filename = Some(decoded),
+            "filename" => filename = Some(parse_filename_value(&decoded)?),
             "filename*" => filename_star = Some(parse_rfc5987_value(&decoded)?),
             _ => {}
         }
@@ -158,7 +158,11 @@ fn parse_rfc5987_value(value: &str) -> Result<String, ParseError> {
         return Err(ParseError::new("only UTF-8 filename* charset is supported"));
     }
 
-    percent_decode_utf8(encoded)
+    percent_decode_utf8(
+        encoded,
+        "invalid percent-encoding in filename*",
+        "filename* is not valid UTF-8",
+    )
 }
 
 fn split_rfc5987(value: &str) -> Option<(&str, &str)> {
@@ -167,7 +171,23 @@ fn split_rfc5987(value: &str) -> Option<(&str, &str)> {
     Some((charset, encoded))
 }
 
-fn percent_decode_utf8(value: &str) -> Result<String, ParseError> {
+fn parse_filename_value(value: &str) -> Result<String, ParseError> {
+    if !value.as_bytes().contains(&b'%') {
+        return Ok(value.to_owned());
+    }
+
+    percent_decode_utf8(
+        value,
+        "invalid percent-encoding in filename",
+        "filename is not valid UTF-8",
+    )
+}
+
+fn percent_decode_utf8(
+    value: &str,
+    invalid_encoding_message: &'static str,
+    invalid_utf8_message: &'static str,
+) -> Result<String, ParseError> {
     let mut bytes = Vec::with_capacity(value.len());
     let raw = value.as_bytes();
     let mut index = 0;
@@ -175,10 +195,10 @@ fn percent_decode_utf8(value: &str) -> Result<String, ParseError> {
     while index < raw.len() {
         if raw[index] == b'%' {
             if index + 2 >= raw.len() {
-                return Err(ParseError::new("invalid percent-encoding in filename*"));
+                return Err(ParseError::new(invalid_encoding_message));
             }
-            let hi = hex_value(raw[index + 1])?;
-            let lo = hex_value(raw[index + 2])?;
+            let hi = hex_value(raw[index + 1], invalid_encoding_message)?;
+            let lo = hex_value(raw[index + 2], invalid_encoding_message)?;
             bytes.push((hi << 4) | lo);
             index += 3;
             continue;
@@ -188,15 +208,15 @@ fn percent_decode_utf8(value: &str) -> Result<String, ParseError> {
         index += 1;
     }
 
-    String::from_utf8(bytes).map_err(|_| ParseError::new("filename* is not valid UTF-8"))
+    String::from_utf8(bytes).map_err(|_| ParseError::new(invalid_utf8_message))
 }
 
-fn hex_value(byte: u8) -> Result<u8, ParseError> {
+fn hex_value(byte: u8, invalid_encoding_message: &'static str) -> Result<u8, ParseError> {
     match byte {
         b'0'..=b'9' => Ok(byte - b'0'),
         b'a'..=b'f' => Ok(byte - b'a' + 10),
         b'A'..=b'F' => Ok(byte - b'A' + 10),
-        _ => Err(ParseError::new("invalid percent-encoding in filename*")),
+        _ => Err(ParseError::new(invalid_encoding_message)),
     }
 }
 
