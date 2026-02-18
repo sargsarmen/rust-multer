@@ -13,6 +13,7 @@
 - Optional framework helpers:
   - `axum` feature
   - `actix` feature
+  - `hyper` feature (`MulterService` wrapper)
 
 ## Quick Start
 
@@ -116,6 +117,33 @@ async fn upload(
 }
 ```
 
+### hyper 1.0
+
+Level 1 works without any `rust-multer` feature flag by bridging the body with `into_data_stream()`:
+
+```rust
+use http_body_util::BodyExt;
+use rust_multer::{MemoryStorage, Multer};
+
+async fn parse_hyper_body(
+    req: hyper::Request<hyper::body::Incoming>,
+) -> Result<(), rust_multer::MulterError> {
+    let multer = Multer::new(MemoryStorage::new());
+    let content_type = req
+        .headers()
+        .get(hyper::header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    let boundary = rust_multer::extract_boundary(content_type)?;
+    let stream = req.into_body().into_data_stream();
+    let mut multipart = multer.parse_stream(stream, boundary).await?;
+    while let Some(_part) = multipart.next_part().await? {}
+    Ok(())
+}
+```
+
+Level 2 uses `features = ["hyper"]` and `rust_multer::hyper::MulterService`.
+
 ## Examples
 
 Examples live under `examples/*.rs` and can be run with `cargo run --example <name>`.
@@ -125,6 +153,8 @@ Examples live under `examples/*.rs` and can be run with `cargo run --example <na
 - `cargo run --example field_validation`
 - `cargo run --example axum_basic --features axum`
 - `cargo run --example actix_basic --features actix`
+- `cargo run --example hyper_raw --features hyper`
+- `cargo run --example hyper_service --features hyper`
 
 ## Development
 

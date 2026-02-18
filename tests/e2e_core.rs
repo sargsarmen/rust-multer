@@ -37,12 +37,20 @@ async fn parse_and_store_wires_parser_selector_limits_and_storage() {
     );
 
     let output = multer
-        .parse_and_store("BOUND", stream::iter([Ok::<Bytes, MulterError>(Bytes::from_static(body.as_bytes()))]))
+        .parse_and_store(
+            "BOUND",
+            stream::iter([Ok::<Bytes, MulterError>(Bytes::from_static(
+                body.as_bytes(),
+            ))]),
+        )
         .await
         .expect("pipeline should succeed");
 
     assert_eq!(output.stored_files.len(), 1);
-    assert_eq!(output.text_fields, vec![("note".to_owned(), "hello".to_owned())]);
+    assert_eq!(
+        output.text_fields,
+        vec![("note".to_owned(), "hello".to_owned())]
+    );
 
     let stored = &output.stored_files[0];
     let bytes = storage
@@ -66,7 +74,9 @@ async fn multipart_from_content_type_is_framework_agnostic_entry_point() {
     let mut multipart = multer
         .multipart_from_content_type(
             "multipart/form-data; boundary=BOUND",
-            stream::iter([Ok::<Bytes, MulterError>(Bytes::from_static(body.as_bytes()))]),
+            stream::iter([Ok::<Bytes, MulterError>(Bytes::from_static(
+                body.as_bytes(),
+            ))]),
         )
         .expect("content type should parse");
 
@@ -79,7 +89,7 @@ async fn multipart_from_content_type_is_framework_agnostic_entry_point() {
 }
 
 #[tokio::test]
-async fn parse_stream_accepts_async_read_input() {
+async fn parse_reader_accepts_async_read_input() {
     let multer = Multer::new(MemoryStorage::new());
     let body = concat!(
         "--BOUND\r\n",
@@ -96,9 +106,9 @@ async fn parse_stream_accepts_async_read_input() {
     drop(writer);
 
     let mut multipart = multer
-        .parse_stream(reader, "BOUND")
+        .parse_reader(reader, "BOUND")
         .await
-        .expect("parse_stream should initialize multipart");
+        .expect("parse_reader should initialize multipart");
     let mut part = multipart
         .next_part()
         .await
@@ -120,7 +130,12 @@ async fn parse_and_store_reports_malformed_stream_regression() {
     );
 
     let result = multer
-        .parse_and_store("BOUND", stream::iter([Ok::<Bytes, MulterError>(Bytes::from_static(body.as_bytes()))]))
+        .parse_and_store(
+            "BOUND",
+            stream::iter([Ok::<Bytes, MulterError>(Bytes::from_static(
+                body.as_bytes(),
+            ))]),
+        )
         .await;
     let is_expected = match result {
         Err(MulterError::IncompleteStream) => true,
@@ -149,11 +164,15 @@ async fn parse_and_store_respects_unknown_field_policy_regression() {
     );
 
     let result = multer
-        .parse_and_store("BOUND", stream::iter([Ok::<Bytes, MulterError>(Bytes::from_static(body.as_bytes()))]))
+        .parse_and_store(
+            "BOUND",
+            stream::iter([Ok::<Bytes, MulterError>(Bytes::from_static(
+                body.as_bytes(),
+            ))]),
+        )
         .await;
     assert!(matches!(
         result,
         Err(MulterError::UnexpectedField { field }) if field == "other"
     ));
 }
-

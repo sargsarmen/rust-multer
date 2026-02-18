@@ -20,12 +20,12 @@ pub mod field;
 pub mod limits;
 /// High-level multipart stream type.
 pub mod multipart;
+/// Low-level parser components.
+pub mod parser;
 /// Parsed multipart part API.
 pub mod part;
 /// Runtime selector engine.
 pub mod selector;
-/// Low-level parser components.
-pub mod parser;
 /// Storage engine traits and implementations.
 pub mod storage;
 
@@ -33,6 +33,8 @@ pub mod storage;
 pub mod actix;
 #[cfg(feature = "axum")]
 pub mod axum;
+#[cfg(feature = "hyper")]
+pub mod hyper;
 
 pub use builder::MulterBuilder;
 pub use config::{MulterConfig, SelectedField, SelectedFieldKind, Selector, UnknownFieldPolicy};
@@ -47,9 +49,19 @@ pub use storage::{
     NoopStorage, StorageEngine, StoredFile,
 };
 
-/// `AsyncRead` adapter stream used by [`Multer::parse_stream`].
-pub type AsyncReadStream<R> =
-    futures::stream::Map<ReaderStream<R>, fn(Result<Bytes, std::io::Error>) -> Result<Bytes, MulterError>>;
+/// `AsyncRead` adapter stream used by [`Multer::parse_reader`].
+pub type AsyncReadStream<R> = futures::stream::Map<
+    ReaderStream<R>,
+    fn(Result<Bytes, std::io::Error>) -> Result<Bytes, MulterError>,
+>;
+/// Generic body stream adapter used by [`Multer::parse_stream`].
+pub type MappedBodyStream<T, E> =
+    futures::stream::Map<T, fn(Result<Bytes, E>) -> Result<Bytes, MulterError>>;
+
+/// Extracts a multipart boundary token from an HTTP `Content-Type` header.
+pub fn extract_boundary(content_type: &str) -> Result<String, ParseError> {
+    parser::extract_multipart_boundary(content_type)
+}
 
 /// Processed multipart output returned by [`Multer::parse_and_store`].
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -129,12 +141,7 @@ where
         );
 
         self.storage
-            .store(
-                &field_name,
-                file_name.as_deref(),
-                &content_type,
-                stream,
-            )
+            .store(&field_name, file_name.as_deref(), &content_type, stream)
             .await
             .map_err(|err| MulterError::Storage(StorageError::new(err.to_string())))
     }
@@ -164,34 +171,46 @@ where
         self.multipart_from_boundary(boundary, stream)
     }
 
-    /// Creates a configured multipart parser from any `AsyncRead` body stream.
+    /// Creates a configured multipart parser from any byte stream.
     ///
     /// ```rust
-    /// use rust_multer::{MemoryStorage, Multer};
-    /// use tokio::io::AsyncWriteExt;
+    /// use bytes::Bytes;
+    /// use futures::stream;
+    /// use rust_multer::{MemoryStorage, Multer, MulterError};
     ///
     /// # #[tokio::main(flavor = "current_thread")]
     /// # async fn main() {
     /// let multer = Multer::new(MemoryStorage::new());
     /// let body = b"--BOUND\r\nContent-Disposition: form-data; name=\"field\"\r\n\r\nvalue\r\n--BOUND--\r\n";
-    /// let (mut writer, reader) = tokio::io::duplex(1024);
-    /// writer.write_all(body).await.expect("write body");
-    /// drop(writer);
     ///
-    /// let mut multipart = multer.parse_stream(reader, "BOUND").await.expect("parse stream");
+    /// let stream = stream::iter([Ok::<Bytes, MulterError>(Bytes::from_static(body))]);
+    /// let mut multipart = multer.parse_stream(stream, "BOUND").await.expect("parse stream");
     /// let mut part = multipart.next_part().await.expect("next part").expect("part");
     /// assert_eq!(part.text().await.expect("text"), "value");
     /// # }
     /// ```
-    pub async fn parse_stream<R>(
+    pub async fn parse_stream<T, E>(
         &self,
-        stream: R,
+        stream: T,
+        boundary: impl Into<String>,
+    ) -> Result<Multipart<MappedBodyStream<T, E>>, MulterError>
+    where
+        T: Stream<Item = Result<Bytes, E>> + Unpin + Send,
+        E: std::fmt::Display + Send + Sync + 'static,
+    {
+        self.multipart_from_boundary(boundary, map_body_stream(stream))
+    }
+
+    /// Creates a configured multipart parser from any `AsyncRead` source.
+    pub async fn parse_reader<R>(
+        &self,
+        reader: R,
         boundary: impl Into<String>,
     ) -> Result<Multipart<AsyncReadStream<R>>, MulterError>
     where
         R: AsyncRead + Unpin + Send + 'static,
     {
-        self.multipart_from_boundary(boundary, map_async_read_stream(stream))
+        self.multipart_from_boundary(boundary, map_async_read_stream(reader))
     }
 
     /// Parses multipart input and stores all file parts using the active storage backend.
@@ -244,7 +263,10 @@ where
                 let field_name = part.field_name().to_owned();
                 let text = part.text().await?;
                 #[cfg(feature = "tracing")]
-                tracing::trace!(field_name = field_name.as_str(), "multer: captured text part");
+                tracing::trace!(
+                    field_name = field_name.as_str(),
+                    "multer: captured text part"
+                );
                 out.text_fields.push((field_name, text));
             }
         }
@@ -261,7 +283,22 @@ where
 }
 
 fn async_read_item_to_multer(item: Result<Bytes, std::io::Error>) -> Result<Bytes, MulterError> {
-    item.map_err(|err| ParseError::new(format!("async read stream error: {err}")).into())
+    stream_item_to_multer(item)
+}
+
+fn map_body_stream<T, E>(stream: T) -> MappedBodyStream<T, E>
+where
+    T: Stream<Item = Result<Bytes, E>>,
+    E: std::fmt::Display + Send + Sync + 'static,
+{
+    stream.map(stream_item_to_multer::<E>)
+}
+
+fn stream_item_to_multer<E>(item: Result<Bytes, E>) -> Result<Bytes, MulterError>
+where
+    E: std::fmt::Display + Send + Sync + 'static,
+{
+    item.map_err(|err| ParseError::new(format!("body stream error: {err}")).into())
 }
 
 impl Multer<NoopStorage> {
@@ -283,4 +320,3 @@ impl Multer<NoopStorage> {
         MulterBuilder::default()
     }
 }
-

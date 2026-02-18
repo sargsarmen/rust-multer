@@ -5,7 +5,7 @@ edition = "2021"
 rust-version = "1.75"
 license = "MIT OR Apache-2.0"
 description = "Framework-agnostic multipart/form-data parser for Rust"
-keywords = ["multipart", "upload", "axum", "actix", "form"]
+keywords = ["multipart", "upload", "axum", "actix", "hyper"]
 categories = ["web-programming", "asynchronous"]
 
 [features]
@@ -13,6 +13,7 @@ default = ["tokio-rt"]
 tokio-rt = []
 axum = ["dep:axum"]
 actix = ["dep:actix-web", "dep:actix-multipart"]
+hyper = ["dep:hyper", "dep:hyper-util", "dep:http-body-util"]
 tracing = ["dep:tracing"]
 serde = ["dep:serde"]
 
@@ -31,6 +32,9 @@ uuid = { version = "=1.10.0", features = ["v4"] }
 axum = { version = "0.7", optional = true }
 actix-web = { version = "4", optional = true }
 actix-multipart = { version = "0.5", optional = true }
+hyper = { version = "1", features = ["http1", "server"], optional = true }
+hyper-util = { version = "0.1", features = ["tokio"], optional = true }
+http-body-util = { version = "0.1", optional = true }
 tracing = { version = "0.1", optional = true }
 serde = { version = "1", features = ["derive"], optional = true }
 
