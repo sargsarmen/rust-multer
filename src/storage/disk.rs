@@ -280,9 +280,11 @@ fn with_collision_suffix(path: &Path) -> PathBuf {
 
 /// Sanitizes filenames to prevent traversal and unsafe path characters.
 pub fn sanitize_filename(input: &str) -> String {
-    let base = Path::new(input)
-        .file_name()
-        .and_then(|name| name.to_str())
+    // Handle both separator styles so traversal-like names are normalized the
+    // same way on every OS (Windows and Unix path parsing differ here).
+    let base = input
+        .rsplit(['/', '\\'])
+        .find(|segment| !segment.is_empty())
         .unwrap_or("file");
 
     let mut sanitized: String = base
