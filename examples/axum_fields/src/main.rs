@@ -37,7 +37,7 @@ async fn upload(
     );
 
     for (name, value) in text_fields {
-        body.push_str(&format!("- text field={} value={}\n", name, value));
+        body.push_str(&format!("- text field={name} value={value}\n"));
     }
     for file in stored {
         let original_name = file.file_name.as_deref().unwrap_or("<none>");
@@ -118,7 +118,7 @@ async fn main() -> io::Result<()> {
         .with_state(multer);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 8085));
-    println!("axum-fields-example running at http://{}", addr);
+    println!("axum-fields-example running at http://{addr}");
     let listener = tokio::net::TcpListener::bind(addr).await?;
     axum::serve(listener, app).await
 }

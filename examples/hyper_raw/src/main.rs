@@ -153,7 +153,7 @@ async fn main() -> io::Result<()> {
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 8086));
     let listener = TcpListener::bind(addr).await?;
-    println!("hyper-raw-example running at http://{}", addr);
+    println!("hyper-raw-example running at http://{addr}");
 
     loop {
         let (stream, _) = listener.accept().await?;

@@ -82,7 +82,7 @@ async fn main() -> io::Result<()> {
         .with_state(multer);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 8083));
-    println!("axum-memory-example running at http://{}", addr);
+    println!("axum-memory-example running at http://{addr}");
     let listener = tokio::net::TcpListener::bind(addr).await?;
     axum::serve(listener, app).await
 }

@@ -81,7 +81,7 @@ async fn upload(
         total
     );
     for key in stored_keys {
-        body.push_str(&format!("- key={}\n", key));
+        body.push_str(&format!("- key={key}\n"));
     }
 
     HttpResponse::Ok().body(body)

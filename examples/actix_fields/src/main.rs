@@ -43,7 +43,7 @@ async fn upload(
     );
 
     for (name, value) in text_fields {
-        body.push_str(&format!("- text field={} value={}\n", name, value));
+        body.push_str(&format!("- text field={name} value={value}\n"));
     }
     for file in stored {
         let original_name = file.file_name.as_deref().unwrap_or("<none>");
